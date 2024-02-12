@@ -12,7 +12,7 @@ const siteMetadata = {
   socialBanner: '/static/images/twitter-card.png',
   email: 'hello@wdestin.xyz',
   github: 'https://github.com/wdestin',
-  twitter: 'https://twitter.com/widgael',
+  x: 'https://x.com/widgael',
   linkedin: 'https://www.linkedin.com/in/wdestin',
   locale: 'en-US',
   analytics: {

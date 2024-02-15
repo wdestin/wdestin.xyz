@@ -1,15 +1,11 @@
-import { Mail, Github, Facebook, Youtube, Linkedin, X, Mastodon, Threads, Instagram } from './icons'
+import { Mail, Github, Linkedin, X, RSS } from './icons'
 
 const components = {
   mail: Mail,
   github: Github,
-  facebook: Facebook,
-  youtube: Youtube,
   linkedin: Linkedin,
   x: X,
-  mastodon: Mastodon,
-  threads: Threads,
-  instagram: Instagram,
+  rss: RSS,
 }
 
 type SocialIconProps = {

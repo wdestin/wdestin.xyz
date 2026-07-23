@@ -1,15 +1,14 @@
-/** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: "wdestin's blog",
-  author: 'Wid-Gaël Destin',
+  title: 'Wid - Software Engineer in Toronto',
+  author: 'Wid',
   headerTitle: 'Wid',
-  description: 'Discover my creative journey and portfolio, blending technology and passion.',
+  description: 'Software engineer based in Toronto. Profiles, code, and contact links.',
   language: 'en-us',
   theme: 'system', // system, dark or light
   siteUrl: 'https://www.wdestin.xyz',
   siteRepo: 'https://github.com/wdestin/wdestin.xyz',
-  siteLogo: '/static/images/logo.png',
-  socialBanner: '/static/images/twitter-card.png',
+  siteLogo: '/static/images/avatar.png',
+  socialBanner: '/opengraph-image',
   email: 'hello@wdestin.xyz',
   github: 'https://github.com/wdestin',
   x: 'https://x.com/widgael',

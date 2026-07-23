@@ -2,7 +2,7 @@
 const siteMetadata = {
   title: "wdestin's blog",
   author: 'Wid-Gaël Destin',
-  headerTitle: 'wdestin',
+  headerTitle: 'Wid',
   description: 'Discover my creative journey and portfolio, blending technology and passion.',
   language: 'en-us',
   theme: 'system', // system, dark or light

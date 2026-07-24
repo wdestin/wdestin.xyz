@@ -32,7 +32,6 @@
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
     "cross-env": "^10.1.0",
-    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8",
     "eslint-config-next": "^14",
     "eslint-config-prettier": "^8.8.0",
@@ -51,10 +50,5 @@
       "prettier --write"
     ]
   },
-  "packageManager": "yarn@4.0.2",
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
-  }
+  "packageManager": "yarn@4.0.2"
 }

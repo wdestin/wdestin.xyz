@@ -11,6 +11,7 @@ Personal link hub for Wid, built with Next.js and Tailwind CSS.
 
 ```bash
 yarn dev
+yarn format:check
 yarn lint
 yarn build
 ```

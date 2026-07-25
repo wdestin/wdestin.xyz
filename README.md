@@ -21,7 +21,6 @@ yarn build
 - Profile links: `data/profileLinks.ts`
 - Site metadata: `data/siteMetadata.ts`
 - Homepage layout: `app/Main.tsx`
-- Avatar: `public/static/images/avatar.png`
 - Social preview image: `app/opengraph-image.tsx`
 
 ## Production Checks

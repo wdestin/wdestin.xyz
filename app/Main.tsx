@@ -1,7 +1,5 @@
 import Link from '@/components/Link'
-import siteMetadata from '@/data/siteMetadata'
 import profileLinks from '@/data/profileLinks'
-import Image from '@/components/Image'
 import { Github, Linkedin, Mail, X } from '@/components/social-icons/icons'
 
 const icons = {
@@ -17,25 +15,13 @@ const profileFacts = ['Software Engineer', 'Toronto, Canada', 'Previously at Tha
 
 export default function Home() {
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-14rem)] w-full max-w-5xl items-center gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+    <div className="mx-auto grid min-h-[calc(100vh-14rem)] w-full max-w-5xl items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
       <section className="text-left">
-        <div className="flex items-center gap-5">
-          <Image
-            src="/static/images/avatar.png"
-            alt={siteMetadata.author}
-            width={116}
-            height={116}
-            priority
-            className="h-24 w-24 rounded-full border border-gray-200 object-cover shadow-sm sm:h-28 sm:w-28 dark:border-gray-800"
-          />
-          <div>
-            <h1 className="text-4xl font-bold tracking-normal text-gray-950 sm:text-5xl dark:text-white">
-              Wid
-            </h1>
-          </div>
-        </div>
+        <h1 className="text-5xl font-bold tracking-normal text-gray-950 sm:text-6xl dark:text-white">
+          Wid
+        </h1>
 
-        <p className="mt-7 max-w-xl text-xl leading-8 text-gray-700 dark:text-gray-200">
+        <p className="mt-6 max-w-xl text-xl leading-8 text-gray-700 dark:text-gray-200">
           Software engineer based in Toronto. This is the fastest way to find my profiles, code, and
           contact info.
         </p>
@@ -76,8 +62,11 @@ export default function Home() {
                   {description}
                 </span>
               </span>
-              <span className="text-lg text-gray-400 transition group-hover:translate-x-1 group-hover:text-primary-500">
-                -&gt;
+              <span
+                aria-hidden="true"
+                className="text-2xl leading-none text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-400"
+              >
+                ›
               </span>
             </Link>
           )

@@ -4,11 +4,7 @@ const colors = require('tailwindcss/colors')
 
 /** @type {import("tailwindcss/types").Config } */
 module.exports = {
-  content: [
-    './app/**/*.{js,ts,jsx,tsx}',
-    './components/**/*.{js,ts,tsx}',
-    './data/**/*.{js,ts}',
-  ],
+  content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,tsx}', './data/**/*.{js,ts}'],
   darkMode: 'media',
   theme: {
     extend: {

@@ -26,10 +26,10 @@ export default function Home() {
             width={116}
             height={116}
             priority
-            className="h-24 w-24 rounded-full border border-gray-200 object-cover shadow-sm dark:border-gray-800 sm:h-28 sm:w-28"
+            className="h-24 w-24 rounded-full border border-gray-200 object-cover shadow-sm sm:h-28 sm:w-28 dark:border-gray-800"
           />
           <div>
-            <h1 className="text-4xl font-bold tracking-normal text-gray-950 dark:text-white sm:text-5xl">
+            <h1 className="text-4xl font-bold tracking-normal text-gray-950 sm:text-5xl dark:text-white">
               Wid
             </h1>
           </div>

@@ -7,15 +7,15 @@
   },
   "scripts": {
     "start": "next dev",
-    "dev": "cross-env INIT_CWD=$PWD next dev",
-    "build": "cross-env INIT_CWD=$PWD next build",
+    "dev": "next dev",
+    "build": "next build",
     "serve": "next start",
-    "analyze": "cross-env ANALYZE=true next build",
+    "format": "prettier --write app components data css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
+    "format:check": "prettier --check app components data css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
     "lint": "next lint --dir app --dir components --dir data",
     "lint:fix": "next lint --fix --dir app --dir components --dir data"
   },
   "dependencies": {
-    "@next/bundle-analyzer": "^14",
     "autoprefixer": "^10.4.24",
     "next": "^14",
     "postcss": "^8.5.6",
@@ -30,7 +30,6 @@
     "@types/react": "^18.2.14",
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
-    "cross-env": "^10.1.0",
     "eslint": "^8",
     "eslint-config-next": "^14",
     "eslint-config-prettier": "^8.8.0",

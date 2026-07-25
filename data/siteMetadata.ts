@@ -3,7 +3,6 @@ type SiteMetadata = {
   author: string
   description: string
   language: string
-  theme: 'system' | 'dark' | 'light'
   siteUrl: string
   socialBanner: string
   email: string
@@ -22,7 +21,6 @@ const siteMetadata = {
   author: 'Wid',
   description: 'Software engineer based in Toronto. Profiles, code, and contact links.',
   language: 'en-us',
-  theme: 'system',
   siteUrl: 'https://www.wdestin.xyz',
   socialBanner: '/opengraph-image',
   email: 'hello@wdestin.xyz',

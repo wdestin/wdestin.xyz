@@ -9,7 +9,7 @@ module.exports = {
     './components/**/*.{js,ts,tsx}',
     './data/**/*.{js,ts}',
   ],
-  darkMode: 'class',
+  darkMode: 'media',
   theme: {
     extend: {
       lineHeight: {

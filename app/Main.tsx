@@ -15,7 +15,7 @@ const profileFacts = ['Software Engineer', 'Toronto, Canada', 'Previously at Tha
 
 export default function Home() {
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-14rem)] w-full max-w-5xl items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+    <div className="mx-auto grid w-full max-w-5xl items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
       <section className="text-left">
         <h1 className="text-5xl font-bold tracking-normal text-gray-950 sm:text-6xl dark:text-white">
           Wid

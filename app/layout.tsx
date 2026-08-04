@@ -61,8 +61,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             data-website-id={siteMetadata.analytics.umamiAnalytics.umamiWebsiteId}
           />
         )}
-        <div className="flex h-screen flex-col justify-between font-sans">
-          <main className="mb-auto">{children}</main>
+        <div className="flex min-h-screen flex-col font-sans">
+          <main className="flex flex-1 items-center">{children}</main>
           <Footer />
         </div>
       </body>

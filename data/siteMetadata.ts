@@ -17,9 +17,9 @@ type SiteMetadata = {
 }
 
 const siteMetadata = {
-  title: 'Wid - Software Engineer in Toronto',
+  title: 'Wid - Builder',
   author: 'Wid',
-  description: 'Software engineer based in Toronto. Profiles, code, and contact links.',
+  description: 'Builder making useful systems, creative tools, and web experiences.',
   language: 'en-us',
   siteUrl: 'https://www.wdestin.xyz',
   socialBanner: '/opengraph-image',

@@ -11,7 +11,11 @@ const icons = {
 
 type IconName = keyof typeof icons
 
-const profileFacts = ['Software Engineer', 'Toronto, Canada', 'Previously at Thales DIS']
+const profileFacts = [
+  'Builder',
+  'EdgePoint Wealth Management',
+  'Previously Capgemini and Thales DIS',
+]
 
 export default function Home() {
   return (
@@ -22,8 +26,8 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 max-w-xl text-xl leading-8 text-gray-700 dark:text-gray-200">
-          Software engineer based in Toronto. This is the fastest way to find my profiles, code, and
-          contact info.
+          I build useful systems, creative tools, and web experiences. This is the easiest way to
+          find what I am making and how to reach me.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-2">

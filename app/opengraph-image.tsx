@@ -37,12 +37,12 @@ export default function Image() {
         }}
       >
         <div style={{ color: '#db2777', display: 'flex', fontSize: 28, fontWeight: 700 }}>
-          Software Engineer
+          Builder
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: 96, fontWeight: 800, lineHeight: 1 }}>Wid</div>
           <div style={{ color: '#4b5563', fontSize: 36, lineHeight: 1.35, marginTop: 28 }}>
-            Software engineer based in Toronto.
+            Builder making useful systems, creative tools, and web experiences.
           </div>
         </div>
         <div style={{ color: '#6b7280', display: 'flex', fontSize: 28, gap: 26 }}>

@@ -12,30 +12,30 @@ const profileLinks: ProfileLink[] = [
   {
     title: 'LinkedIn',
     href: siteMetadata.linkedin,
-    description: 'Experience, background, and professional updates.',
+    description: 'Experience, background, and the path so far.',
     icon: 'linkedin',
-    label: 'Professional profile',
+    label: 'Work history',
   },
   {
     title: 'GitHub',
     href: siteMetadata.github,
-    description: 'Projects, experiments, and code I am shaping.',
+    description: 'Projects, experiments, and works in progress.',
     icon: 'github',
-    label: 'Code and projects',
+    label: "Things I'm building",
   },
   {
     title: 'X',
     href: siteMetadata.x,
     description: 'Short notes, links, and public thoughts.',
     icon: 'x',
-    label: 'Public notes',
+    label: 'Notes and ideas',
   },
   {
     title: 'Email',
     href: `mailto:${siteMetadata.email}`,
     description: siteMetadata.email,
     icon: 'mail',
-    label: 'Direct contact',
+    label: 'Start a conversation',
   },
 ]
 

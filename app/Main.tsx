@@ -17,6 +17,8 @@ const profileFacts = [
   'Previously Capgemini and Thales DIS',
 ]
 
+const konamiCode = ['↑', '↑', '↓', '↓', '←', '→', '←', '→', 'B', 'A']
+
 export default function Home() {
   return (
     <div className="mx-auto grid w-full max-w-5xl items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
@@ -38,6 +40,20 @@ export default function Home() {
             >
               {fact}
             </span>
+          ))}
+        </div>
+
+        <div
+          aria-label="Konami code"
+          className="mt-8 hidden items-center gap-2 text-gray-400 lg:flex dark:text-gray-500"
+        >
+          {konamiCode.map((key, index) => (
+            <kbd
+              key={`${key}-${index}`}
+              className="flex h-8 min-w-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-2 font-mono text-sm font-semibold shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+              {key}
+            </kbd>
           ))}
         </div>
       </section>

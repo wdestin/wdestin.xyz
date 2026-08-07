@@ -2,6 +2,7 @@ import 'css/tailwind.css'
 
 import Script from 'next/script'
 import Footer from '@/components/Footer'
+import KonamiWebTuiOverlay from '@/components/KonamiWebTuiOverlay'
 import siteMetadata from '@/data/siteMetadata'
 import { Metadata } from 'next'
 
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex flex-1 items-center">{children}</main>
           <Footer />
         </div>
+        <KonamiWebTuiOverlay />
       </body>
     </html>
   )

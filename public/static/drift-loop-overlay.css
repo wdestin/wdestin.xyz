@@ -1,0 +1,132 @@
+.drift-overlay {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 50%, rgb(13 20 33 / 90%), rgb(2 4 10 / 98%) 62%), #02040a;
+  bottom: 0;
+  box-sizing: border-box;
+  color: #f6f1dc;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: clamp(16px, 4vw, 48px);
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 50;
+}
+
+.drift-overlay,
+.drift-overlay * {
+  box-sizing: border-box;
+}
+
+.drift-shell {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  max-height: 100%;
+  max-width: 100%;
+  outline: 0;
+  position: relative;
+  width: 100%;
+}
+
+.drift-stage {
+  aspect-ratio: 16 / 9;
+  background: #050713;
+  box-shadow:
+    0 0 0 1px rgb(231 211 162 / 18%),
+    0 28px 90px rgb(0 0 0 / 72%);
+  image-rendering: pixelated;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.drift-canvas {
+  display: block;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  width: 100%;
+}
+
+.drift-vignette {
+  background:
+    linear-gradient(rgb(255 255 255 / 5%) 50%, transparent 50%) 0 0 / 100% 4px,
+    radial-gradient(circle at 52% 55%, transparent 48%, rgb(2 3 8 / 50%) 92%),
+    linear-gradient(90deg, rgb(0 0 0 / 24%), transparent 18%, transparent 82%, rgb(0 0 0 / 24%));
+  inset: 0;
+  opacity: 0.42;
+  pointer-events: none;
+  position: absolute;
+}
+
+.drift-close {
+  align-items: center;
+  background: rgb(5 7 17 / 70%);
+  border: 1px solid rgb(246 241 220 / 35%);
+  border-radius: 4px;
+  color: #f6f1dc;
+  cursor: pointer;
+  display: inline-flex;
+  font:
+    700 16px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  right: 10px;
+  text-transform: uppercase;
+  top: 10px;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+  width: 36px;
+}
+
+.drift-close:hover,
+.drift-close:focus-visible {
+  background: rgb(246 241 220 / 16%);
+  border-color: rgb(246 241 220 / 72%);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.drift-close:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  .drift-overlay {
+    padding: 12px;
+  }
+
+  .drift-shell {
+    height: 100%;
+    width: 100%;
+  }
+
+  .drift-close {
+    height: 32px;
+    right: 8px;
+    top: 8px;
+    width: 32px;
+  }
+}
+
+@media (min-aspect-ratio: 16 / 9) {
+  .drift-stage {
+    height: 100%;
+    width: auto;
+  }
+}

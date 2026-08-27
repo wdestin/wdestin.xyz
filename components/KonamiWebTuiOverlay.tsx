@@ -3,11 +3,11 @@
 import type { ComponentType } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-type WebTuiDemoOverlayProps = {
+type DriftLoopOverlayProps = {
   onClose: () => void
 }
 
-type WebTuiDemoOverlayComponent = ComponentType<WebTuiDemoOverlayProps>
+type DriftLoopOverlayComponent = ComponentType<DriftLoopOverlayProps>
 
 const konamiSequence = [
   'ArrowUp',
@@ -22,10 +22,10 @@ const konamiSequence = [
   'A',
 ]
 
-const webTuiStylesheetId = 'webtui-overlay-stylesheet'
+const driftLoopStylesheetId = 'drift-loop-overlay-stylesheet'
 
-let webTuiStylesheetPromise: Promise<void> | null = null
-let webTuiDemoOverlayPromise: Promise<WebTuiDemoOverlayComponent> | null = null
+let driftLoopStylesheetPromise: Promise<void> | null = null
+let driftLoopOverlayPromise: Promise<DriftLoopOverlayComponent> | null = null
 
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -46,13 +46,13 @@ function normalizeKey(key: string) {
   return key.length === 1 ? key.toUpperCase() : key
 }
 
-function loadWebTuiStylesheet() {
-  if (webTuiStylesheetPromise) {
-    return webTuiStylesheetPromise
+function loadDriftLoopStylesheet() {
+  if (driftLoopStylesheetPromise) {
+    return driftLoopStylesheetPromise
   }
 
-  webTuiStylesheetPromise = new Promise((resolve, reject) => {
-    const existingLink = document.getElementById(webTuiStylesheetId) as HTMLLinkElement | null
+  driftLoopStylesheetPromise = new Promise((resolve, reject) => {
+    const existingLink = document.getElementById(driftLoopStylesheetId) as HTMLLinkElement | null
 
     if (existingLink?.dataset.loaded === 'true' || existingLink?.sheet) {
       resolve()
@@ -60,9 +60,9 @@ function loadWebTuiStylesheet() {
     }
 
     const link = existingLink ?? document.createElement('link')
-    link.id = webTuiStylesheetId
+    link.id = driftLoopStylesheetId
     link.rel = 'stylesheet'
-    link.href = '/static/webtui-overlay.css'
+    link.href = '/static/drift-loop-overlay.css'
 
     link.addEventListener(
       'load',
@@ -76,8 +76,8 @@ function loadWebTuiStylesheet() {
     link.addEventListener(
       'error',
       () => {
-        webTuiStylesheetPromise = null
-        reject(new Error('Failed to load the WebTUI overlay stylesheet.'))
+        driftLoopStylesheetPromise = null
+        reject(new Error('Failed to load the drift loop overlay stylesheet.'))
       },
       { once: true }
     )
@@ -87,22 +87,20 @@ function loadWebTuiStylesheet() {
     }
   })
 
-  return webTuiStylesheetPromise
+  return driftLoopStylesheetPromise
 }
 
-function loadWebTuiDemoOverlay() {
-  webTuiDemoOverlayPromise ??= import('@/components/WebTuiDemoOverlay').then(
+function loadDriftLoopOverlay() {
+  driftLoopOverlayPromise ??= import('@/components/DriftLoopOverlay').then(
     (module) => module.default
   )
 
-  return webTuiDemoOverlayPromise
+  return driftLoopOverlayPromise
 }
 
 export default function KonamiWebTuiOverlay() {
   const [isOpen, setIsOpen] = useState(false)
-  const [WebTuiDemoOverlay, setWebTuiDemoOverlay] = useState<WebTuiDemoOverlayComponent | null>(
-    null
-  )
+  const [DriftLoopOverlay, setDriftLoopOverlay] = useState<DriftLoopOverlayComponent | null>(null)
   const isLoading = useRef(false)
   const isMounted = useRef(false)
   const sequenceIndex = useRef(0)
@@ -115,7 +113,7 @@ export default function KonamiWebTuiOverlay() {
     }
   }, [])
 
-  const openDemoOverlay = useCallback(async () => {
+  const openDriftLoopOverlay = useCallback(async () => {
     if (isLoading.current) {
       return
     }
@@ -123,10 +121,10 @@ export default function KonamiWebTuiOverlay() {
     isLoading.current = true
 
     try {
-      const [Overlay] = await Promise.all([loadWebTuiDemoOverlay(), loadWebTuiStylesheet()])
+      const [Overlay] = await Promise.all([loadDriftLoopOverlay(), loadDriftLoopStylesheet()])
 
       if (isMounted.current) {
-        setWebTuiDemoOverlay(() => Overlay)
+        setDriftLoopOverlay(() => Overlay)
         setIsOpen(true)
       }
     } catch (error) {
@@ -155,7 +153,7 @@ export default function KonamiWebTuiOverlay() {
         sequenceIndex.current += 1
 
         if (sequenceIndex.current === konamiSequence.length) {
-          void openDemoOverlay()
+          void openDriftLoopOverlay()
           sequenceIndex.current = 0
         }
 
@@ -168,11 +166,11 @@ export default function KonamiWebTuiOverlay() {
     window.addEventListener('keydown', handleKeyDown)
 
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [openDemoOverlay])
+  }, [openDriftLoopOverlay])
 
-  if (!isOpen || !WebTuiDemoOverlay) {
+  if (!isOpen || !DriftLoopOverlay) {
     return null
   }
 
-  return <WebTuiDemoOverlay onClose={() => setIsOpen(false)} />
+  return <DriftLoopOverlay onClose={() => setIsOpen(false)} />
 }

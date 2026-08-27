@@ -16,7 +16,6 @@
     "lint:fix": "next lint --fix --dir app --dir components --dir data"
   },
   "dependencies": {
-    "@webtui/css": "^0.1.9",
     "autoprefixer": "^10.4.24",
     "next": "^14",
     "postcss": "^8.5.6",

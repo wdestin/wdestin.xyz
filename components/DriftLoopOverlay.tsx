@@ -32,7 +32,9 @@ type SmokePuff = {
 }
 
 type DriftState = {
+  animationEnergy: number
   bodyRoll: number
+  brakePulse: number
   car: Point
   carAngle: number
   driftLean: number
@@ -43,6 +45,7 @@ type DriftState = {
   slideAngle: number
   smoke: Point
   smokeIntensity: number
+  suspensionLoad: number
   wheelFrame: number
 }
 
@@ -164,17 +167,29 @@ type VoxelCuboid = VoxelPoint & {
 }
 
 type VoxelCarPose = {
+  bodyPitch?: number
   bodyShadeAlpha?: number
+  bodySquash?: number
   depthScale?: number
+  detailAlpha?: number
   farWheelAlpha?: number
   frontDetailAlpha?: number
   headlightAlpha?: number
+  headlightEmphasis?: number
+  lightJitter?: number
   name: string
   rearDetailAlpha?: number
+  rearEmphasis?: number
+  rearKick?: number
   sparkOffset: Point
   spriteScale: number
+  spriteYOffset?: number
+  suspension?: number
+  wheelPhase?: number
+  wheelTurn?: number
   wheelHighlights: Array<Point & { angle?: number; width: number }>
   yaw: number
+  yawOffset?: number
 }
 
 type VoxelPoseFrame = {
@@ -190,6 +205,9 @@ type ProjectedVoxelFace = {
 }
 
 const valleyLights: CityLight[] = [
+  { x: 139, y: 86, color: '#f4cf88', phase: 0.22 },
+  { x: 146, y: 88, color: '#8dd5df', phase: 0.62 },
+  { x: 152, y: 84, color: '#ed9d62', phase: 0.05 },
   { x: 158, y: 82, color: '#e5b05e', phase: 0.32 },
   { x: 164, y: 84, color: '#8dd5df', phase: 0.72 },
   { x: 171, y: 81, color: '#f4cf88', phase: 0.18 },
@@ -211,6 +229,8 @@ const valleyLights: CityLight[] = [
   { x: 288, y: 84, color: '#d6e4a5', phase: 0.68 },
   { x: 294, y: 77, color: '#f4cf88', phase: 0.0 },
   { x: 303, y: 83, color: '#8dd5df', phase: 0.88 },
+  { x: 311, y: 86, color: '#e5b05e', phase: 0.28 },
+  { x: 316, y: 80, color: '#f4cf88', phase: 0.52 },
 ]
 
 const foregroundTrees = [
@@ -343,6 +363,10 @@ const smokePuffs: SmokePuff[] = [
   { offset: 0.175, radius: 8.5, x: -38, y: 16, layer: 0, tone: 'warm', depth: 'front' },
   { offset: 0.21, radius: 7.4, x: -45, y: 16, layer: 1, tone: 'cool', depth: 'back' },
   { offset: 0.245, radius: 6.2, x: -52, y: 15, layer: 2, tone: 'white', depth: 'back' },
+  { offset: 0.025, radius: 2.4, x: -5, y: 1, layer: 2, tone: 'white', depth: 'front' },
+  { offset: 0.068, radius: 3.1, x: -16, y: 2, layer: 0, tone: 'cool', depth: 'front' },
+  { offset: 0.128, radius: 4.7, x: -29, y: 6, layer: 2, tone: 'white', depth: 'front' },
+  { offset: 0.198, radius: 5.3, x: -44, y: 8, layer: 1, tone: 'cool', depth: 'back' },
 ]
 
 const skidTrailOffsets = [0, 0.018, 0.036, 0.058, 0.084, 0.114, 0.148, 0.186, 0.228]
@@ -352,6 +376,8 @@ const tireSprayOffsets = [0.01, 0.024, 0.041, 0.063, 0.089, 0.118]
 const voxelPalettes = {
   amber: { top: '#ffd46a', side: '#f0a13c', front: '#ffbf47', back: '#9c572b' },
   black: { top: '#1a1d22', side: '#080a0f', front: '#101218', back: '#05070b' },
+  bodyShadow: { top: '#e8ece7', side: '#abb6b6', front: '#d8ddd8', back: '#8f9a9b' },
+  chrome: { top: '#dfe7e5', side: '#7f8c96', front: '#bac5c6', back: '#566371' },
   glass: { top: '#324058', side: '#111827', front: '#1c2535', back: '#0c111c' },
   red: { top: '#ff5364', side: '#b7162c', front: '#e72a43', back: '#7f1022' },
   rim: { top: '#59616b', side: '#242a32', front: '#424951', back: '#151922' },
@@ -396,40 +422,390 @@ const carVoxelModel: VoxelCuboid[] = [
   { x: 4, y: 14, z: 17, width: 6, depth: 3, height: 4, palette: voxelPalettes.black },
   { x: -24, y: 0, z: 21, width: 8, depth: 17, height: 4, palette: voxelPalettes.glass },
   { x: 10, y: 0, z: 24, width: 4, depth: 17, height: 5, palette: voxelPalettes.white },
+  { x: 12, y: -10, z: 19, width: 22, depth: 1, height: 2, palette: voxelPalettes.bodyShadow },
+  { x: 12, y: 10, z: 17, width: 22, depth: 1, height: 2, palette: voxelPalettes.bodyShadow },
+  { x: -7, y: -11, z: 16, width: 2, depth: 3, height: 8, palette: voxelPalettes.black },
+  { x: 8, y: -11, z: 15, width: 2, depth: 3, height: 6, palette: voxelPalettes.black },
+  { x: -16, y: 11, z: 15, width: 2, depth: 3, height: 6, palette: voxelPalettes.black },
+  { x: 15, y: -12, z: 12, width: 14, depth: 2, height: 2, palette: voxelPalettes.chrome },
+  { x: -20, y: -12, z: 12, width: 10, depth: 2, height: 2, palette: voxelPalettes.chrome },
+  { x: -25, y: 0, z: 25, width: 12, depth: 15, height: 2, palette: voxelPalettes.glass },
+  { x: -31, y: 0, z: 15, width: 3, depth: 16, height: 2, palette: voxelPalettes.chrome },
+  { x: 27, y: 0, z: 19, width: 11, depth: 14, height: 2, palette: voxelPalettes.bodyShadow },
 ]
 
 const carVoxelPoses: VoxelCarPose[] = [
   {
-    name: 'entry',
-    yaw: -0.52,
+    name: 'entry-01',
+    yaw: -0.62,
+    bodyPitch: -0.25,
     bodyShadeAlpha: 0.08,
-    spriteScale: 1,
+    detailAlpha: 0.78,
+    headlightEmphasis: 1.08,
+    lightJitter: 0.1,
+    suspension: 0.08,
+    wheelPhase: 0,
+    wheelTurn: -0.08,
+    spriteScale: 0.97,
     sparkOffset: { x: -12, y: 10 },
     wheelHighlights: [
-      { x: -18, y: 8, width: 6, angle: 0.16 },
-      { x: 13, y: 8, width: 6, angle: -0.1 },
+      { x: -18, y: 8, width: 6, angle: 0.08 },
+      { x: 14, y: 8, width: 6, angle: -0.1 },
     ],
   },
   {
-    name: 'apex',
-    yaw: -0.2,
-    bodyShadeAlpha: 0.18,
+    name: 'entry-02',
+    yaw: -0.57,
+    bodyPitch: -0.1,
+    bodyShadeAlpha: 0.1,
+    detailAlpha: 0.9,
+    headlightEmphasis: 1.16,
+    lightJitter: -0.16,
+    suspension: 0.32,
+    wheelPhase: 0.22,
+    wheelTurn: -0.15,
+    spriteScale: 0.99,
+    sparkOffset: { x: -13, y: 10 },
+    wheelHighlights: [
+      { x: -18, y: 8, width: 7, angle: 0.12 },
+      { x: 14, y: 8, width: 7, angle: -0.18 },
+    ],
+  },
+  {
+    name: 'entry-03',
+    yaw: -0.52,
+    bodyPitch: 0.12,
+    bodyShadeAlpha: 0.13,
+    detailAlpha: 0.98,
+    headlightEmphasis: 1.22,
+    lightJitter: 0.18,
+    suspension: 0.58,
+    wheelPhase: 0.44,
+    wheelTurn: -0.22,
+    spriteScale: 1.01,
+    sparkOffset: { x: -14, y: 10 },
+    wheelHighlights: [
+      { x: -19, y: 8.5, width: 7, angle: 0.18 },
+      { x: 13, y: 8.5, width: 8, angle: -0.24 },
+    ],
+  },
+  {
+    name: 'entry-04',
+    yaw: -0.5,
+    bodyPitch: 0.22,
+    bodyShadeAlpha: 0.15,
+    bodySquash: 0.08,
+    detailAlpha: 1,
+    headlightEmphasis: 1.26,
+    lightJitter: -0.06,
+    suspension: 0.78,
+    wheelPhase: 0.56,
+    wheelTurn: -0.26,
+    spriteScale: 1.02,
+    spriteYOffset: 0.3,
+    sparkOffset: { x: -15, y: 11 },
+    wheelHighlights: [
+      { x: -19, y: 9, width: 7, angle: 0.22 },
+      { x: 13, y: 9, width: 8, angle: -0.28 },
+    ],
+  },
+  {
+    name: 'load-01',
+    yaw: -0.48,
+    bodyPitch: 0.32,
+    bodyShadeAlpha: 0.16,
+    bodySquash: 0.18,
+    detailAlpha: 1,
+    headlightEmphasis: 1.28,
+    lightJitter: -0.1,
+    suspension: 0.92,
+    wheelPhase: 0.66,
+    wheelTurn: -0.3,
+    spriteScale: 1.03,
+    spriteYOffset: 0.8,
+    sparkOffset: { x: -16, y: 11 },
+    wheelHighlights: [
+      { x: -20, y: 9, width: 7, angle: 0.24 },
+      { x: 13, y: 9, width: 8, angle: -0.32 },
+    ],
+  },
+  {
+    name: 'load-02',
+    yaw: -0.45,
+    bodyPitch: 0.26,
+    bodyShadeAlpha: 0.19,
+    bodySquash: 0.28,
+    detailAlpha: 1,
+    headlightEmphasis: 1.3,
+    lightJitter: 0.08,
+    rearKick: 0.5,
+    suspension: 1.15,
+    wheelPhase: 0.78,
+    wheelTurn: -0.34,
     spriteScale: 1.04,
+    spriteYOffset: 1.1,
+    sparkOffset: { x: -17, y: 11 },
+    wheelHighlights: [
+      { x: -20, y: 9.5, width: 8, angle: 0.28 },
+      { x: 12, y: 9.5, width: 8, angle: -0.38 },
+    ],
+  },
+  {
+    name: 'load-03',
+    yaw: -0.42,
+    bodyPitch: 0.18,
+    bodyShadeAlpha: 0.22,
+    bodySquash: 0.22,
+    detailAlpha: 1,
+    headlightEmphasis: 1.24,
+    lightJitter: 0.16,
+    rearKick: 0.9,
+    suspension: 1.2,
+    wheelPhase: 0.9,
+    wheelTurn: -0.38,
+    spriteScale: 1.045,
+    spriteYOffset: 1.15,
+    sparkOffset: { x: -17, y: 11 },
+    wheelHighlights: [
+      { x: -20, y: 9.5, width: 8, angle: 0.3 },
+      { x: 12, y: 9.8, width: 8, angle: -0.4 },
+    ],
+  },
+  {
+    name: 'load-04',
+    yaw: -0.39,
+    bodyPitch: 0.1,
+    bodyShadeAlpha: 0.21,
+    bodySquash: 0.12,
+    detailAlpha: 1,
+    headlightEmphasis: 1.22,
+    lightJitter: -0.14,
+    rearKick: 1.25,
+    suspension: 1.02,
+    wheelPhase: 0.02,
+    wheelTurn: -0.41,
+    spriteScale: 1.045,
+    spriteYOffset: 0.85,
     sparkOffset: { x: -18, y: 11 },
     wheelHighlights: [
-      { x: -22, y: 9, width: 7, angle: 0.34 },
-      { x: 13, y: 10, width: 8, angle: -0.34 },
+      { x: -21, y: 9.3, width: 8, angle: 0.31 },
+      { x: 12, y: 9.8, width: 8, angle: -0.42 },
     ],
   },
   {
-    name: 'recovery',
-    yaw: 0.06,
-    depthScale: 0.76,
-    farWheelAlpha: 0.42,
-    frontDetailAlpha: 0.58,
-    headlightAlpha: 0.48,
-    rearDetailAlpha: 1.18,
+    name: 'drift-init-01',
+    yaw: -0.36,
+    bodyPitch: 0.02,
     bodyShadeAlpha: 0.2,
+    detailAlpha: 1,
+    headlightEmphasis: 1.2,
+    lightJitter: -0.18,
+    rearKick: 1.6,
+    suspension: 0.78,
+    wheelPhase: 0.1,
+    wheelTurn: -0.43,
+    spriteScale: 1.04,
+    spriteYOffset: 0.6,
+    sparkOffset: { x: -18, y: 11 },
+    wheelHighlights: [
+      { x: -21, y: 9, width: 8, angle: 0.32 },
+      { x: 12, y: 10, width: 8, angle: -0.43 },
+    ],
+  },
+  {
+    name: 'drift-init-02',
+    yaw: -0.29,
+    bodyPitch: -0.08,
+    bodyShadeAlpha: 0.23,
+    detailAlpha: 1,
+    headlightEmphasis: 1.16,
+    lightJitter: 0.14,
+    rearKick: 2.5,
+    suspension: 0.58,
+    wheelPhase: 0.32,
+    wheelTurn: -0.48,
+    spriteScale: 1.05,
+    sparkOffset: { x: -20, y: 11 },
+    wheelHighlights: [
+      { x: -22, y: 9.5, width: 8, angle: 0.36 },
+      { x: 12, y: 10, width: 9, angle: -0.48 },
+    ],
+  },
+  {
+    name: 'drift-init-03',
+    yaw: -0.26,
+    bodyPitch: -0.12,
+    bodyShadeAlpha: 0.24,
+    detailAlpha: 1,
+    headlightEmphasis: 1.14,
+    lightJitter: -0.04,
+    rearKick: 2.95,
+    suspension: 0.5,
+    wheelPhase: 0.44,
+    wheelTurn: -0.5,
+    spriteScale: 1.05,
+    spriteYOffset: 0.2,
+    sparkOffset: { x: -21, y: 11 },
+    wheelHighlights: [
+      { x: -22, y: 9.4, width: 8, angle: 0.38 },
+      { x: 13, y: 10, width: 9, angle: -0.5 },
+    ],
+  },
+  {
+    name: 'drift-init-04',
+    yaw: -0.24,
+    bodyPitch: -0.14,
+    bodyShadeAlpha: 0.25,
+    detailAlpha: 1,
+    headlightEmphasis: 1.12,
+    lightJitter: 0.1,
+    rearKick: 3.25,
+    suspension: 0.46,
+    wheelPhase: 0.5,
+    wheelTurn: -0.52,
+    spriteScale: 1.05,
+    sparkOffset: { x: -22, y: 11 },
+    wheelHighlights: [
+      { x: -23, y: 9, width: 8, angle: 0.4 },
+      { x: 13, y: 10, width: 9, angle: -0.52 },
+    ],
+  },
+  {
+    name: 'apex-01',
+    yaw: -0.22,
+    bodyPitch: -0.14,
+    bodyShadeAlpha: 0.25,
+    detailAlpha: 1,
+    headlightEmphasis: 1.12,
+    lightJitter: -0.06,
+    rearKick: 3.4,
+    suspension: 0.46,
+    wheelPhase: 0.54,
+    wheelTurn: -0.52,
+    spriteScale: 1.05,
+    sparkOffset: { x: -22, y: 11 },
+    wheelHighlights: [
+      { x: -23, y: 9, width: 8, angle: 0.4 },
+      { x: 13, y: 10, width: 9, angle: -0.52 },
+    ],
+  },
+  {
+    name: 'apex-02',
+    yaw: -0.18,
+    bodyPitch: -0.2,
+    bodyShadeAlpha: 0.26,
+    detailAlpha: 1,
+    headlightEmphasis: 1.08,
+    lightJitter: 0.16,
+    rearKick: 3.8,
+    suspension: 0.3,
+    wheelPhase: 0.76,
+    wheelTurn: -0.5,
+    spriteScale: 1.045,
+    sparkOffset: { x: -23, y: 11 },
+    wheelHighlights: [
+      { x: -23, y: 9, width: 8, angle: 0.34 },
+      { x: 13, y: 10, width: 9, angle: -0.5 },
+    ],
+  },
+  {
+    name: 'apex-03',
+    yaw: -0.16,
+    bodyPitch: -0.18,
+    bodyShadeAlpha: 0.25,
+    detailAlpha: 0.98,
+    headlightEmphasis: 1.06,
+    lightJitter: -0.12,
+    rearKick: 3.6,
+    suspension: 0.2,
+    wheelPhase: 0.92,
+    wheelTurn: -0.46,
+    spriteScale: 1.035,
+    sparkOffset: { x: -22, y: 11 },
+    wheelHighlights: [
+      { x: -22, y: 9, width: 8, angle: 0.3 },
+      { x: 14, y: 10, width: 8, angle: -0.46 },
+    ],
+  },
+  {
+    name: 'apex-04',
+    yaw: -0.13,
+    bodyPitch: -0.12,
+    bodyShadeAlpha: 0.22,
+    detailAlpha: 0.96,
+    headlightEmphasis: 1.03,
+    lightJitter: 0.08,
+    rearKick: 3.1,
+    suspension: 0.1,
+    wheelPhase: 0.08,
+    wheelTurn: -0.38,
+    spriteScale: 1.02,
+    sparkOffset: { x: -21, y: 11 },
+    wheelHighlights: [
+      { x: -22, y: 9, width: 7, angle: 0.24 },
+      { x: 14, y: 10, width: 8, angle: -0.38 },
+    ],
+  },
+  {
+    name: 'apex-05',
+    yaw: -0.09,
+    bodyPitch: -0.05,
+    bodyShadeAlpha: 0.22,
+    detailAlpha: 0.94,
+    headlightEmphasis: 1,
+    lightJitter: -0.1,
+    rearKick: 2.45,
+    suspension: -0.04,
+    wheelPhase: 0.18,
+    wheelTurn: -0.3,
+    spriteScale: 0.995,
+    sparkOffset: { x: -20, y: 10 },
+    wheelHighlights: [
+      { x: -22, y: 8.7, width: 7, angle: 0.21 },
+      { x: 13, y: 9.5, width: 7, angle: -0.3 },
+    ],
+  },
+  {
+    name: 'recovery-01',
+    yaw: -0.04,
+    bodyPitch: 0.02,
+    depthScale: 0.82,
+    farWheelAlpha: 0.5,
+    frontDetailAlpha: 0.62,
+    headlightAlpha: 0.5,
+    rearDetailAlpha: 1.16,
+    rearEmphasis: 1.1,
+    bodyShadeAlpha: 0.21,
+    detailAlpha: 0.92,
+    lightJitter: 0.05,
+    rearKick: 1.7,
+    suspension: -0.12,
+    wheelPhase: 0.18,
+    wheelTurn: -0.22,
+    spriteScale: 0.95,
+    sparkOffset: { x: -18, y: 10 },
+    wheelHighlights: [
+      { x: -21, y: 8.5, width: 7, angle: 0.18 },
+      { x: 11, y: 8.5, width: 6, angle: -0.14 },
+    ],
+  },
+  {
+    name: 'recovery-02',
+    yaw: 0.04,
+    bodyPitch: 0.12,
+    depthScale: 0.75,
+    farWheelAlpha: 0.42,
+    frontDetailAlpha: 0.54,
+    headlightAlpha: 0.44,
+    rearDetailAlpha: 1.22,
+    rearEmphasis: 1.18,
+    bodyShadeAlpha: 0.2,
+    detailAlpha: 0.86,
+    lightJitter: -0.08,
+    rearKick: 0.8,
+    suspension: -0.2,
+    wheelPhase: 0.4,
+    wheelTurn: -0.12,
     spriteScale: 0.9,
     sparkOffset: { x: -17, y: 10 },
     wheelHighlights: [
@@ -438,21 +814,149 @@ const carVoxelPoses: VoxelCarPose[] = [
     ],
   },
   {
-    name: 'exit',
-    yaw: -0.02,
-    depthScale: 0.62,
-    farWheelAlpha: 0.24,
-    frontDetailAlpha: 0.36,
-    headlightAlpha: 0.26,
-    rearDetailAlpha: 1.28,
-    bodyShadeAlpha: 0.14,
-    spriteScale: 0.72,
-    sparkOffset: { x: -14, y: 8 },
+    name: 'recovery-03',
+    yaw: 0.03,
+    bodyPitch: 0.08,
+    depthScale: 0.7,
+    farWheelAlpha: 0.36,
+    frontDetailAlpha: 0.46,
+    headlightAlpha: 0.36,
+    rearDetailAlpha: 1.26,
+    rearEmphasis: 1.22,
+    bodyShadeAlpha: 0.18,
+    detailAlpha: 0.8,
+    lightJitter: 0.04,
+    rearKick: 0.35,
+    suspension: -0.1,
+    wheelPhase: 0.52,
+    wheelTurn: -0.08,
+    spriteScale: 0.84,
+    sparkOffset: { x: -16, y: 9 },
     wheelHighlights: [
-      { x: -16, y: 7, width: 5, angle: 0.04 },
+      { x: -19, y: 7.6, width: 6, angle: 0.1 },
+      { x: 10, y: 7.6, width: 5, angle: -0.06 },
+    ],
+  },
+  {
+    name: 'exit-near-01',
+    yaw: 0.02,
+    bodyPitch: 0.06,
+    depthScale: 0.66,
+    farWheelAlpha: 0.3,
+    frontDetailAlpha: 0.42,
+    headlightAlpha: 0.32,
+    rearDetailAlpha: 1.28,
+    rearEmphasis: 1.24,
+    bodyShadeAlpha: 0.16,
+    detailAlpha: 0.74,
+    lightJitter: 0.06,
+    rearKick: 0.3,
+    suspension: -0.05,
+    wheelPhase: 0.62,
+    wheelTurn: -0.06,
+    spriteScale: 0.76,
+    sparkOffset: { x: -15, y: 8 },
+    wheelHighlights: [
+      { x: -17, y: 7, width: 5, angle: 0.06 },
       { x: 9, y: 7, width: 4, angle: -0.06 },
     ],
   },
+  {
+    name: 'exit-near-02',
+    yaw: -0.02,
+    bodyPitch: 0.02,
+    depthScale: 0.62,
+    farWheelAlpha: 0.24,
+    frontDetailAlpha: 0.34,
+    headlightAlpha: 0.24,
+    rearDetailAlpha: 1.3,
+    rearEmphasis: 1.25,
+    bodyShadeAlpha: 0.14,
+    detailAlpha: 0.68,
+    lightJitter: -0.04,
+    suspension: 0,
+    wheelPhase: 0.84,
+    wheelTurn: -0.03,
+    spriteScale: 0.7,
+    sparkOffset: { x: -14, y: 8 },
+    wheelHighlights: [
+      { x: -16, y: 7, width: 5, angle: 0.04 },
+      { x: 9, y: 7, width: 4, angle: -0.04 },
+    ],
+  },
+  {
+    name: 'exit-far-01',
+    yaw: 0.01,
+    bodyPitch: 0,
+    depthScale: 0.55,
+    farWheelAlpha: 0.16,
+    frontDetailAlpha: 0.24,
+    headlightAlpha: 0.14,
+    rearDetailAlpha: 1.16,
+    rearEmphasis: 1.16,
+    bodyShadeAlpha: 0.1,
+    detailAlpha: 0.54,
+    lightJitter: 0.03,
+    suspension: 0,
+    wheelPhase: 0.06,
+    wheelTurn: 0,
+    spriteScale: 0.6,
+    sparkOffset: { x: -12, y: 7 },
+    wheelHighlights: [
+      { x: -14, y: 6, width: 4, angle: 0 },
+      { x: 8, y: 6, width: 3, angle: 0 },
+    ],
+  },
+  {
+    name: 'exit-far-02',
+    yaw: 0.02,
+    bodyPitch: 0,
+    depthScale: 0.5,
+    farWheelAlpha: 0.1,
+    frontDetailAlpha: 0.18,
+    headlightAlpha: 0.1,
+    rearDetailAlpha: 1.1,
+    rearEmphasis: 1.08,
+    bodyShadeAlpha: 0.08,
+    detailAlpha: 0.44,
+    lightJitter: -0.02,
+    suspension: 0,
+    wheelPhase: 0.28,
+    wheelTurn: 0,
+    spriteScale: 0.52,
+    sparkOffset: { x: -11, y: 7 },
+    wheelHighlights: [
+      { x: -13, y: 6, width: 3, angle: 0 },
+      { x: 7, y: 6, width: 3, angle: 0 },
+    ],
+  },
+]
+
+const carVoxelPoseTimeline = [
+  { pose: carVoxelPoses[0], phase: 0 },
+  { pose: carVoxelPoses[1], phase: 0.08 },
+  { pose: carVoxelPoses[2], phase: 0.13 },
+  { pose: carVoxelPoses[3], phase: 0.18 },
+  { pose: carVoxelPoses[4], phase: 0.23 },
+  { pose: carVoxelPoses[5], phase: 0.28 },
+  { pose: carVoxelPoses[6], phase: 0.32 },
+  { pose: carVoxelPoses[7], phase: 0.36 },
+  { pose: carVoxelPoses[8], phase: 0.4 },
+  { pose: carVoxelPoses[9], phase: 0.44 },
+  { pose: carVoxelPoses[10], phase: 0.47 },
+  { pose: carVoxelPoses[11], phase: 0.5 },
+  { pose: carVoxelPoses[12], phase: 0.53 },
+  { pose: carVoxelPoses[13], phase: 0.56 },
+  { pose: carVoxelPoses[14], phase: 0.59 },
+  { pose: carVoxelPoses[15], phase: 0.62 },
+  { pose: carVoxelPoses[16], phase: 0.65 },
+  { pose: carVoxelPoses[17], phase: 0.68 },
+  { pose: carVoxelPoses[18], phase: 0.71 },
+  { pose: carVoxelPoses[19], phase: 0.74 },
+  { pose: carVoxelPoses[20], phase: 0.77 },
+  { pose: carVoxelPoses[21], phase: 0.8 },
+  { pose: carVoxelPoses[22], phase: 0.83 },
+  { pose: carVoxelPoses[23], phase: 0.86 },
 ]
 
 const voxelSpriteWidth = 160
@@ -1473,6 +1977,58 @@ function getRoadDetailLayer() {
       1
     )
   })
+  ;[
+    { progress: 0.18, offset: -0.18, length: 0.18, width: 0.09 },
+    { progress: 0.26, offset: 0.2, length: 0.16, width: 0.08 },
+    { progress: 0.39, offset: 0.08, length: 0.2, width: 0.06 },
+    { progress: 0.52, offset: -0.16, length: 0.16, width: 0.055 },
+    { progress: 0.67, offset: 0.12, length: 0.14, width: 0.045 },
+  ].forEach((patch, index) => {
+    const sample = sampleRoad(patch.progress)
+    const center = sampleRoadOffset(patch.progress, patch.offset)
+    const halfLength = sample.roadWidth * patch.length
+    const halfWidth = sample.roadWidth * patch.width
+    const along = { x: sample.tangent.x * halfLength, y: sample.tangent.y * halfLength }
+    const across = { x: sample.normal.x * halfWidth, y: sample.normal.y * halfWidth }
+
+    fillPolygon(
+      context,
+      [
+        { x: center.x - along.x - across.x, y: center.y - along.y - across.y },
+        { x: center.x + along.x - across.x, y: center.y + along.y - across.y },
+        { x: center.x + along.x + across.x, y: center.y + along.y + across.y },
+        { x: center.x - along.x + across.x, y: center.y - along.y + across.y },
+      ],
+      index % 2 === 0 ? 'rgba(9, 14, 23, 0.28)' : 'rgba(51, 61, 76, 0.16)'
+    )
+    pixelLine(
+      context,
+      center.x - along.x * 0.8,
+      center.y - along.y * 0.8,
+      center.x + along.x * 0.72,
+      center.y + along.y * 0.72,
+      'rgba(121, 137, 151, 0.16)',
+      1
+    )
+  })
+
+  for (let index = 0; index < 26; index += 1) {
+    const progress = 0.12 + ((index * 0.037) % 0.72)
+    const sample = sampleRoad(progress)
+    const puddle = sampleRoadOffset(progress, -0.24 + (index % 7) * 0.08)
+    const length = Math.max(2, Math.round(sample.roadWidth * (0.08 + (index % 3) * 0.025)))
+    const alpha = 0.05 + (index % 4) * 0.018
+
+    pixelLine(
+      context,
+      puddle.x,
+      puddle.y,
+      puddle.x + sample.tangent.x * length,
+      puddle.y + sample.tangent.y * length,
+      `rgba(143, 163, 178, ${alpha})`,
+      1
+    )
+  }
 
   for (let index = 0; index < 34; index += 1) {
     const progress = 0.08 + (index / 33) * 0.78
@@ -1590,51 +2146,60 @@ function drawRotatedPolygon(
   fillPolygon(context, polygon, color)
 }
 
-function getCarVoxelPose(phase: number) {
-  if (phase < 0.27) {
-    return carVoxelPoses[0]
-  }
-
-  if (phase < 0.58) {
-    return carVoxelPoses[1]
-  }
-
-  if (phase < 0.68) {
-    return carVoxelPoses[2]
-  }
-
-  return carVoxelPoses[3]
-}
-
 function getCarVoxelPoseFrames(phase: number): VoxelPoseFrame[] {
-  const transitions = [
-    { from: 0, to: 1, start: 0.24, end: 0.31 },
-    { from: 1, to: 2, start: 0.54, end: 0.62 },
-    { from: 2, to: 3, start: 0.66, end: 0.74 },
-  ]
-  const transition = transitions.find(({ start, end }) => phase >= start && phase <= end)
+  const segmentIndex = carVoxelPoseTimeline.findIndex((frame, index) => {
+    const next = carVoxelPoseTimeline[index + 1]
 
-  if (!transition) {
-    return [{ pose: getCarVoxelPose(phase), alpha: 1 }]
+    return next ? phase >= frame.phase && phase <= next.phase : false
+  })
+
+  if (segmentIndex === -1) {
+    return [
+      {
+        pose:
+          phase < carVoxelPoseTimeline[1].phase
+            ? carVoxelPoseTimeline[0].pose
+            : carVoxelPoseTimeline[carVoxelPoseTimeline.length - 1].pose,
+        alpha: 1,
+      },
+    ]
   }
 
-  const amount = smootherstep((phase - transition.start) / (transition.end - transition.start))
+  const start = carVoxelPoseTimeline[segmentIndex]
+  const end = carVoxelPoseTimeline[segmentIndex + 1]
+  const segmentDuration = end.phase - start.phase
+  const fadeStart = start.phase + segmentDuration * 0.68
+  const amount = smootherstep((phase - fadeStart) / Math.max(0.001, end.phase - fadeStart))
+
+  if (amount <= 0) {
+    return [{ pose: start.pose, alpha: 1 }]
+  }
 
   return [
-    { pose: carVoxelPoses[transition.from], alpha: 1 - amount },
-    { pose: carVoxelPoses[transition.to], alpha: amount },
+    { pose: start.pose, alpha: 1 - amount },
+    { pose: end.pose, alpha: amount },
   ]
 }
 
 function projectVoxelPoint(point: VoxelPoint, pose: VoxelCarPose) {
-  const sin = Math.sin(pose.yaw)
-  const cos = Math.cos(pose.yaw)
-  const yawX = point.x * cos - point.y * sin
-  const yawY = point.x * sin + point.y * cos
+  const yaw = pose.yaw + (pose.yawOffset ?? 0)
+  const sin = Math.sin(yaw)
+  const cos = Math.cos(yaw)
+  const rearWeight = clamp((-point.x - 5) / 30, 0, 1)
+  const frontWeight = clamp((point.x - 5) / 30, 0, 1)
+  const wheelWeight = point.z < 11 ? 1 : 0
+  const pitchedZ =
+    point.z * (1 - (pose.bodySquash ?? 0) * 0.03) +
+    (pose.bodyPitch ?? 0) * (frontWeight - rearWeight * 0.7)
+  const posedY = point.y + (pose.rearKick ?? 0) * rearWeight + (pose.wheelTurn ?? 0) * wheelWeight
+  const yawX = point.x * cos - posedY * sin
+  const yawY = point.x * sin + posedY * cos
+  const suspensionDrop =
+    (pose.suspension ?? 0) * (point.z > 10 ? 1 : 0.3) + (pose.spriteYOffset ?? 0)
 
   return {
     x: voxelSpriteWidth / 2 + (yawX + yawY * 0.34) * voxelRenderScale,
-    y: 68 + (yawY * 0.38 - point.z * 0.74) * voxelRenderScale,
+    y: 68 + (yawY * 0.38 - pitchedZ * 0.74 + suspensionDrop) * voxelRenderScale,
   }
 }
 
@@ -1754,11 +2319,7 @@ function getVoxelFaces(cuboid: VoxelCuboid, pose: VoxelCarPose) {
 }
 
 function getPoseCuboidAlpha(cuboid: VoxelCuboid, pose: VoxelCarPose) {
-  let alpha = 1
-
-  if (pose.name === 'entry' || pose.name === 'apex') {
-    return alpha
-  }
+  let alpha = pose.detailAlpha ?? 1
 
   const isFront = cuboid.x > 20
   const isRear = cuboid.x < -24
@@ -1774,7 +2335,7 @@ function getPoseCuboidAlpha(cuboid: VoxelCuboid, pose: VoxelCarPose) {
   }
 
   if (isHeadlight || isFrontMarker) {
-    alpha *= pose.headlightAlpha ?? 1
+    alpha *= (pose.headlightAlpha ?? 1) * (pose.headlightEmphasis ?? 1)
   }
 
   if (isFarWheel || isFarRim) {
@@ -1782,7 +2343,7 @@ function getPoseCuboidAlpha(cuboid: VoxelCuboid, pose: VoxelCarPose) {
   }
 
   if (isRearLight || (isRear && cuboid.palette === voxelPalettes.black)) {
-    alpha *= pose.rearDetailAlpha ?? 1
+    alpha *= (pose.rearDetailAlpha ?? 1) * (pose.rearEmphasis ?? 1)
   }
 
   return clamp(alpha, 0, 1)
@@ -1839,10 +2400,16 @@ function drawVoxelProjectedRect(
 }
 
 function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPose) {
-  const isLatePose = pose.name === 'recovery' || pose.name === 'exit'
+  const isLatePose = pose.name === 'recovery' || pose.name.startsWith('exit')
+  const isApexPose = pose.name.startsWith('apex') || pose.name === 'drift-init'
   const frontDetailAlpha = pose.frontDetailAlpha ?? 1
   const headlightAlpha = pose.headlightAlpha ?? 1
   const rearDetailAlpha = pose.rearDetailAlpha ?? 1
+  const rearEmphasis = pose.rearEmphasis ?? 1
+  const headlightEmphasis = pose.headlightEmphasis ?? 1
+  const detailAlpha = pose.detailAlpha ?? 1
+  const lightJitter = pose.lightJitter ?? 0
+  const wheelTurn = pose.wheelTurn ?? 0
   const seamAlpha = isLatePose ? 0.46 : 0.72
   const bodyShadeAlpha = pose.bodyShadeAlpha ?? 0.1
 
@@ -1859,6 +2426,20 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     { x: -5, y: -11.8, z: 23 },
     { x: -5, y: 11.8, z: 23 },
     'rgba(3, 5, 10, 0.55)'
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: -25, y: -8.6, z: 25 },
+    { x: -10, y: -8.6, z: 27 },
+    `rgba(112, 131, 154, ${0.34 * detailAlpha * rearEmphasis})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: -23, y: 8.4, z: 24 },
+    { x: -9, y: 8.4, z: 25 },
+    `rgba(18, 26, 41, ${0.5 * detailAlpha * rearEmphasis})`
   )
   drawVoxelProjectedLine(
     context,
@@ -1892,6 +2473,27 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
   drawVoxelProjectedLine(
     context,
     pose,
+    { x: 4, y: -6.5, z: 18 },
+    { x: 28, y: -4.8, z: 18 },
+    `rgba(132, 139, 139, ${0.34 * detailAlpha * frontDetailAlpha})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: 5, y: 5.8, z: 17 },
+    { x: 28, y: 4.3, z: 17 },
+    `rgba(241, 245, 239, ${0.3 * detailAlpha * frontDetailAlpha})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: 18, y: -8.8, z: 20 },
+    { x: 29, y: -7.1, z: 20 },
+    `rgba(255, 255, 245, ${0.34 * detailAlpha * headlightEmphasis})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
     { x: -18, y: 9.5, z: 15 },
     { x: 25, y: 7.4, z: 15 },
     `rgba(5, 8, 13, ${bodyShadeAlpha * 1.25})`,
@@ -1903,6 +2505,20 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     { x: 4, y: -7.5, z: 24 },
     { x: 18, y: -6.7, z: 22 },
     `rgba(154, 163, 164, ${bodyShadeAlpha * 1.3})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: -2, y: -10.7, z: 13 },
+    { x: -2, y: 9.4, z: 13 },
+    `rgba(7, 9, 14, ${0.38 * detailAlpha})`
+  )
+  drawVoxelProjectedLine(
+    context,
+    pose,
+    { x: 10, y: -10.4, z: 12 },
+    { x: 10, y: 8.8, z: 12 },
+    `rgba(7, 9, 14, ${0.32 * detailAlpha})`
   )
   drawVoxelProjectedLine(
     context,
@@ -1934,6 +2550,22 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
   )
   drawVoxelProjectedRect(context, pose, { x: -11, y: -12.5, z: 16 }, 3, 1, '#dfe4df')
   drawVoxelProjectedRect(context, pose, { x: 8, y: -12.5, z: 16 }, 2, 1, '#9aa5a8')
+  drawVoxelProjectedRect(
+    context,
+    pose,
+    { x: 13, y: -13.2, z: 17 },
+    3,
+    1,
+    `rgba(5, 7, 10, ${0.62 * detailAlpha})`
+  )
+  drawVoxelProjectedRect(
+    context,
+    pose,
+    { x: 13, y: 13.2, z: 16 },
+    3,
+    1,
+    `rgba(5, 7, 10, ${0.48 * detailAlpha})`
+  )
 
   if (!isLatePose) {
     drawVoxelProjectedLine(
@@ -1950,13 +2582,29 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
       { x: 29, y: 5, z: 16 },
       'rgba(255, 255, 246, 0.36)'
     )
+    drawVoxelProjectedLine(
+      context,
+      pose,
+      { x: 18, y: -11.9, z: 10 },
+      { x: 28, y: -11.9, z: 11 },
+      `rgba(8, 10, 15, ${0.62 * frontDetailAlpha})`,
+      2
+    )
+    drawVoxelProjectedLine(
+      context,
+      pose,
+      { x: 18, y: 11.9, z: 10 },
+      { x: 28, y: 11.9, z: 11 },
+      `rgba(8, 10, 15, ${0.46 * frontDetailAlpha})`,
+      2
+    )
   } else {
     drawVoxelProjectedLine(
       context,
       pose,
       { x: -31, y: -8, z: 15 },
       { x: -26, y: 8, z: 15 },
-      `rgba(255, 70, 86, ${clamp(0.5 * rearDetailAlpha, 0, 1)})`
+      `rgba(255, 70, 86, ${clamp(0.5 * rearDetailAlpha * rearEmphasis, 0, 1)})`
     )
     drawVoxelProjectedLine(
       context,
@@ -1970,7 +2618,23 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
       pose,
       { x: -29, y: -8, z: 22 },
       { x: -20, y: 7, z: 22 },
-      `rgba(80, 95, 116, ${clamp(0.62 * rearDetailAlpha, 0, 1)})`
+      `rgba(80, 95, 116, ${clamp(0.62 * rearDetailAlpha * rearEmphasis, 0, 1)})`
+    )
+    drawVoxelProjectedLine(
+      context,
+      pose,
+      { x: -35, y: -8, z: 10 },
+      { x: -35, y: 8, z: 10 },
+      `rgba(5, 7, 11, ${0.72 * rearEmphasis})`,
+      2
+    )
+    drawVoxelProjectedRect(
+      context,
+      pose,
+      { x: -35, y: 0, z: 15 },
+      5,
+      1,
+      `rgba(152, 166, 170, ${0.35 * rearEmphasis})`
     )
   }
 
@@ -1992,18 +2656,18 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     drawVoxelProjectedRect(
       context,
       pose,
-      { x: 29, y: -8, z: 15 },
+      { x: 29, y: -8 + lightJitter, z: 15 },
       isLatePose ? 3 : 4,
       isLatePose ? 1 : 2,
-      `rgba(255, 242, 176, ${0.42 * headlightAlpha})`
+      `rgba(255, 242, 176, ${0.42 * headlightAlpha * headlightEmphasis})`
     )
     drawVoxelProjectedRect(
       context,
       pose,
-      { x: 30, y: 8, z: 15 },
+      { x: 30, y: 8 + lightJitter * 0.5, z: 15 },
       isLatePose ? 2 : 3,
       1,
-      `rgba(255, 251, 213, ${0.34 * headlightAlpha})`
+      `rgba(255, 251, 213, ${0.34 * headlightAlpha * headlightEmphasis})`
     )
   }
 
@@ -2013,7 +2677,7 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     { x: -30, y: -12.8, z: 12 },
     isLatePose ? 7 : 6,
     3,
-    `rgba(196, 30, 52, ${clamp(0.86 * rearDetailAlpha, 0, 1)})`
+    `rgba(196, 30, 52, ${clamp(0.86 * rearDetailAlpha * rearEmphasis, 0, 1)})`
   )
   drawVoxelProjectedRect(
     context,
@@ -2021,7 +2685,7 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     { x: -30, y: 12.8, z: 12 },
     isLatePose ? 7 : 6,
     3,
-    `rgba(239, 53, 77, ${clamp(0.92 * rearDetailAlpha, 0, 1)})`
+    `rgba(239, 53, 77, ${clamp(0.92 * rearDetailAlpha * rearEmphasis, 0, 1)})`
   )
   drawVoxelProjectedRect(
     context,
@@ -2029,17 +2693,34 @@ function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPo
     { x: -31, y: 0, z: 14 },
     isLatePose ? 5 : 3,
     1,
-    `rgba(255, 139, 101, ${clamp(0.46 * rearDetailAlpha, 0, 1)})`
+    `rgba(255, 139, 101, ${clamp(0.46 * rearDetailAlpha * rearEmphasis, 0, 1)})`
   )
   ;[
-    { x: -19, y: -14.4, z: 9, size: isLatePose ? 2 : 3 },
-    { x: 15, y: -14.4, z: 9, size: isLatePose ? 2 : 3 },
-    { x: -19, y: 14.4, z: 9, size: isLatePose ? 1 : 2 },
-    { x: 15, y: 14.4, z: 9, size: isLatePose ? 1 : 2 },
+    { x: -19, y: -14.4, z: 9, size: isLatePose ? 2 : 3, steer: -wheelTurn * 1.6 },
+    { x: 15, y: -14.4, z: 9, size: isLatePose ? 2 : 3, steer: wheelTurn * 2 },
+    { x: -19, y: 14.4, z: 9, size: isLatePose ? 1 : 2, steer: -wheelTurn },
+    { x: 15, y: 14.4, z: 9, size: isLatePose ? 1 : 2, steer: wheelTurn * 1.4 },
   ].forEach((wheel, index) => {
-    const alpha = index > 1 && isLatePose ? 0.28 : 0.7
+    const alpha = (index > 1 && isLatePose ? 0.28 : 0.7) * detailAlpha
+    const spokeLength = Math.max(2, wheel.size + (isApexPose ? 2 : 0))
+    const wheelPhase = (pose.wheelPhase ?? 0) + index * 0.25
 
     drawVoxelProjectedRect(context, pose, wheel, wheel.size, 1, `rgba(202, 211, 211, ${alpha})`)
+    drawVoxelProjectedLine(
+      context,
+      pose,
+      {
+        x: wheel.x - spokeLength / 2,
+        y: wheel.y,
+        z: wheel.z + wheel.steer + Math.sin(wheelPhase * Math.PI * 2),
+      },
+      {
+        x: wheel.x + spokeLength / 2,
+        y: wheel.y,
+        z: wheel.z - wheel.steer + Math.cos(wheelPhase * Math.PI * 2),
+      },
+      `rgba(91, 101, 110, ${0.44 * alpha})`
+    )
     drawVoxelProjectedRect(
       context,
       pose,
@@ -2119,6 +2800,14 @@ function getBodyRoll(phase: number, driftLean: number) {
   return Math.sin(phase * Math.PI * 8 + 0.55) * driftLean * 1.2
 }
 
+function getSuspensionLoad(phase: number, driftLean: number) {
+  const entryCompression = smoothstep(pulseNear(phase, 0.22, 0.12)) * 1.15
+  const apexSettle = smoothstep(pulseNear(phase, 0.48, 0.16)) * 0.45
+  const recoveryLift = smoothstep(pulseNear(phase, 0.62, 0.11)) * -0.35
+
+  return (entryCompression + apexSettle + recoveryLift) * (0.45 + driftLean * 0.55)
+}
+
 function getWheelFrame(phase: number, driftLean: number, opacity: number) {
   if (opacity < 0.12 || driftLean < 0.08) {
     return 0
@@ -2158,11 +2847,20 @@ function getDriftState(phase: number): DriftState {
     1
   )
   const slideRoad = sampleRoad(slideProgress)
+  const brakePulse = smoothstep(pulseNear(routePhase, 0.47, 0.18))
+  const suspensionLoad = getSuspensionLoad(routePhase, driftLean)
+  const animationEnergy = clamp(
+    opacity * (0.25 + driftLean * 0.7 + brakePulse * 0.32 + suspensionLoad * 0.18),
+    0,
+    1.25
+  )
   const state: DriftState = {
+    animationEnergy,
     bodyRoll: getBodyRoll(routePhase, driftLean),
+    brakePulse,
     car: {
       x: road.center.x + road.normal.x * road.roadWidth * lateralOffset,
-      y: road.center.y + road.normal.y * road.roadWidth * lateralOffset,
+      y: road.center.y + road.normal.y * road.roadWidth * lateralOffset + suspensionLoad * 0.7,
     },
     carAngle,
     driftLean,
@@ -2183,6 +2881,7 @@ function getDriftState(phase: number): DriftState {
       0,
       1
     ),
+    suspensionLoad,
     wheelFrame: getWheelFrame(routePhase, driftLean, opacity),
   }
 
@@ -2302,6 +3001,65 @@ function drawSky(context: CanvasRenderingContext2D, phase: number) {
     const twinkle = 0.5 + 0.5 * Math.sin((phase + index * 0.157) * Math.PI * 2)
     pixelRect(context, marker.x, marker.y, twinkle > 0.35 ? 2 : 1, 1, marker.color)
   })
+  ;[
+    [
+      { x: 136, y: 91 },
+      { x: 149, y: 88 },
+      { x: 162, y: 90 },
+      { x: 178, y: 87 },
+    ],
+    [
+      { x: 191, y: 91 },
+      { x: 211, y: 88 },
+      { x: 232, y: 91 },
+      { x: 254, y: 89 },
+      { x: 279, y: 92 },
+    ],
+  ].forEach((road, roadIndex) => {
+    strokePolyline(
+      context,
+      road,
+      roadIndex === 0 ? 'rgba(86, 107, 126, 0.18)' : 'rgba(69, 88, 108, 0.16)',
+      1
+    )
+    road.forEach((point, index) => {
+      const twinkle = 0.5 + 0.5 * Math.sin((phase + roadIndex * 0.21 + index * 0.091) * Math.PI * 2)
+
+      if (twinkle > 0.42) {
+        pixelRect(
+          context,
+          point.x,
+          point.y - 1,
+          index % 2 === 0 ? 2 : 1,
+          1,
+          roadIndex === 0 ? '#f0c56d' : '#95e0ee'
+        )
+      }
+    })
+  })
+
+  for (let cluster = 0; cluster < 5; cluster += 1) {
+    const baseX = 151 + cluster * 31
+    const baseY = 91 + (cluster % 2) * 3
+
+    for (let lightIndex = 0; lightIndex < 8; lightIndex += 1) {
+      const x = baseX + ((lightIndex * 7 + cluster * 3) % 24)
+      const y = baseY + ((lightIndex * 5 + cluster) % 8)
+      const twinkle =
+        0.42 + 0.58 * Math.sin((phase + cluster * 0.13 + lightIndex * 0.071) * Math.PI * 2)
+
+      if (twinkle > 0.16) {
+        pixelRect(
+          context,
+          x,
+          y,
+          twinkle > 0.72 ? 2 : 1,
+          1,
+          lightIndex % 3 === 0 ? '#f3c778' : lightIndex % 3 === 1 ? '#8dd5df' : '#d6e4a5'
+        )
+      }
+    }
+  }
 
   valleyLights.forEach((light) => {
     const twinkle = 0.45 + 0.55 * Math.sin((phase + light.phase) * Math.PI * 2)
@@ -2636,6 +3394,26 @@ function drawForegroundGuardrail(context: CanvasRenderingContext2D, phase: numbe
       `rgba(219, 229, 226, ${0.28 + shine * 0.35})`,
       highlightWidth
     )
+
+    if (index % 2 === 0) {
+      const seam = {
+        x: lerp(previous.point.x, sample.point.x, 0.54),
+        y: lerp(previous.point.y, sample.point.y, 0.54),
+      }
+      const boltAlpha = 0.24 + shine * 0.22
+
+      pixelLine(
+        context,
+        seam.x,
+        seam.y - 3,
+        seam.x + sample.normal.x * (2 + sample.depthScale * 2),
+        seam.y + sample.normal.y * (2 + sample.depthScale * 2),
+        `rgba(8, 13, 20, ${0.5 + sample.depthScale * 0.2})`,
+        1
+      )
+      pixelRect(context, seam.x - 1, seam.y - 2, 1, 1, `rgba(230, 239, 232, ${boltAlpha})`)
+      pixelRect(context, seam.x + 2, seam.y - 1, 1, 1, `rgba(136, 153, 163, ${boltAlpha})`)
+    }
   })
 
   railSamples.forEach((sample, index) => {
@@ -3278,6 +4056,27 @@ function drawSmoke(
       1,
       `rgba(221, 225, 223, ${alpha * 0.64})`
     )
+
+    for (let fleck = 0; fleck < 4; fleck += 1) {
+      const fleckPhase = phase + index * 0.047 + fleck * 0.083
+      const fleckDrift = rotatePoint(
+        (-radius * 0.8 - fleck * 3 + Math.sin(fleckPhase * Math.PI * 2) * 2.4) * trailScale,
+        (fleck - 1.5) * trailScale + Math.cos(fleckPhase * Math.PI * 2) * 1.5,
+        trailState.slideAngle - trailState.carAngle + 0.18
+      )
+      const fleckAlpha = alpha * (0.32 + fleck * 0.08)
+
+      if (fleckAlpha > 0.014) {
+        pixelRect(
+          context,
+          trailState.smoke.x + drift.x + fleckDrift.x,
+          trailState.smoke.y + drift.y + fleckDrift.y,
+          fleck % 2 === 0 ? 2 : 1,
+          1,
+          `rgba(${tone}, ${fleckAlpha})`
+        )
+      }
+    }
   })
 }
 
@@ -3912,10 +4711,19 @@ function drawCarSpritePart(
 function drawWheelFlicker(
   context: CanvasRenderingContext2D,
   state: DriftState,
-  pose: { sparkOffset: Point; wheelHighlights?: Array<Point & { angle?: number; width: number }> }
+  pose: {
+    sparkOffset: Point
+    wheelHighlights?: Array<Point & { angle?: number; width: number }>
+    wheelPhase?: number
+  }
 ) {
-  const flickerColor = state.wheelFrame === 0 ? '#d8dee0' : '#596170'
-  const wheelEnergy = clamp(state.driftLean * 1.25 + (state.scale - 0.72) * 0.8, 0.25, 1)
+  const poseWheelFrame = Math.floor(((pose.wheelPhase ?? 0) + state.phase * 8) * 2) % 2
+  const flickerColor = (state.wheelFrame + poseWheelFrame) % 2 === 0 ? '#eef2ed' : '#596170'
+  const wheelEnergy = clamp(
+    state.animationEnergy * 0.9 + state.driftLean * 0.55 + (state.scale - 0.72) * 0.8,
+    0.18,
+    1.15
+  )
   const sparkAlpha = clamp((state.driftLean - 0.35) * 1.25, 0, 0.55) * state.opacity
   const wheelHighlights = pose.wheelHighlights ?? [
     { x: -17, y: 8, width: 5, angle: 0 },
@@ -3923,7 +4731,9 @@ function drawWheelFlicker(
   ]
 
   wheelHighlights.forEach((wheel, index) => {
-    const roll = index === 0 ? state.bodyRoll * 0.18 : -state.bodyRoll * 0.12
+    const roll =
+      (index === 0 ? state.bodyRoll * 0.18 : -state.bodyRoll * 0.12) + state.suspensionLoad * 0.18
+    const spinOffset = (state.wheelFrame + poseWheelFrame + index) % 2 === 0 ? 0.8 : -0.8
 
     drawCarPart(
       context,
@@ -3939,13 +4749,24 @@ function drawWheelFlicker(
     drawCarPart(
       context,
       state,
-      wheel.x + (state.wheelFrame === 0 ? 0.8 : -0.8),
+      wheel.x + spinOffset,
       wheel.y + 1.5 + roll,
       Math.max(2, wheel.width - 2),
       1,
       '#171b23',
       0.5 * state.opacity * wheelEnergy,
       (wheel.angle ?? 0) + 0.22
+    )
+    drawCarPart(
+      context,
+      state,
+      wheel.x - spinOffset * 0.6,
+      wheel.y - 1.2 + roll,
+      Math.max(1, wheel.width - 3),
+      1,
+      '#f8f5dd',
+      0.22 * state.opacity * wheelEnergy,
+      (wheel.angle ?? 0) - 0.2
     )
   })
 
@@ -3977,6 +4798,64 @@ function drawWheelFlicker(
   )
 }
 
+function drawCarRuntimeDetails(context: CanvasRenderingContext2D, state: DriftState) {
+  if (state.opacity <= 0.03) {
+    return
+  }
+
+  const scale = state.scale
+  const lightPulse = state.opacity * (0.22 + state.brakePulse * 0.72)
+  const bodyGlint = state.opacity * clamp(0.12 + state.animationEnergy * 0.26, 0, 0.48)
+  const noseGlint = sampleCarPoint(state, 26, -4.5)
+  const rearLampA = sampleCarPoint(state, -28, -4.8)
+  const rearLampB = sampleCarPoint(state, -28, 4.6)
+  const hatchGlint = sampleCarPoint(state, -19, -6.2)
+  const rockerStart = sampleCarPoint(state, -19, 10.5)
+  const rockerEnd = sampleCarPoint(state, 20, 8.4)
+
+  context.save()
+  pixelLine(
+    context,
+    rockerStart.x,
+    rockerStart.y,
+    rockerEnd.x,
+    rockerEnd.y,
+    `rgba(3, 5, 9, ${0.44 * state.opacity})`,
+    Math.max(1, Math.round(scale))
+  )
+  pixelRect(
+    context,
+    hatchGlint.x,
+    hatchGlint.y,
+    Math.max(1, Math.round(7 * scale)),
+    1,
+    `rgba(125, 155, 181, ${bodyGlint})`
+  )
+  pixelRect(
+    context,
+    noseGlint.x,
+    noseGlint.y,
+    Math.max(1, Math.round(5 * scale)),
+    1,
+    `rgba(255, 251, 215, ${0.2 * state.opacity + state.glow * 0.18})`
+  )
+  drawPixelCircle(
+    context,
+    rearLampA.x,
+    rearLampA.y,
+    Math.max(1, 1.4 * scale),
+    `rgba(255, 39, 62, ${lightPulse})`
+  )
+  drawPixelCircle(
+    context,
+    rearLampB.x,
+    rearLampB.y,
+    Math.max(1, 1.6 * scale),
+    `rgba(255, 57, 74, ${lightPulse})`
+  )
+  context.restore()
+}
+
 function drawCar(context: CanvasRenderingContext2D, state: DriftState) {
   if (state.opacity <= 0.03) {
     return
@@ -4005,6 +4884,7 @@ function drawCar(context: CanvasRenderingContext2D, state: DriftState) {
     })
 
     drawWheelFlicker(context, state, voxelPoseFrames[voxelPoseFrames.length - 1].pose)
+    drawCarRuntimeDetails(context, state)
     return
   }
 
@@ -4016,6 +4896,7 @@ function drawCar(context: CanvasRenderingContext2D, state: DriftState) {
     drawCarSpritePart(context, state, part)
   })
   drawWheelFlicker(context, state, fallbackPose)
+  drawCarRuntimeDetails(context, state)
   context.restore()
 }
 

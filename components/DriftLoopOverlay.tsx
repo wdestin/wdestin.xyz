@@ -8,8 +8,8 @@ type DriftLoopOverlayProps = {
 
 const sceneWidth = 320
 const sceneHeight = 180
-const loopDurationMs = 10000
-const reducedMotionLoopDurationMs = 20000
+const loopDurationMs = 6400
+const reducedMotionLoopDurationMs = 12800
 
 type Point = {
   x: number
@@ -46,15 +46,40 @@ type DriftState = {
   wheelFrame: number
 }
 
-type RouteKeyframe = {
-  car: Point
-  carAngle: number
+type RoadControlPoint = {
+  center: Point
+  depthScale: number
+  phase: number
+  roadWidth: number
+}
+
+type RoadSample = {
+  center: Point
+  depthScale: number
+  lowerEdge: Point
+  normal: Point
+  progress: number
+  roadWidth: number
+  tangent: Point
+  upperEdge: Point
+}
+
+type ForegroundRailSample = {
+  depthScale: number
+  normal: Point
+  point: Point
+  progress: number
+  tangent: Point
+}
+
+type MotionKeyframe = {
   driftLean: number
   glow: number
+  lateralOffset: number
   opacity: number
   phase: number
-  scale: number
-  slideAngle: number
+  progress: number
+  slideLag: number
   smokeIntensity: number
 }
 
@@ -165,14 +190,27 @@ type ProjectedVoxelFace = {
 }
 
 const valleyLights: CityLight[] = [
+  { x: 158, y: 82, color: '#e5b05e', phase: 0.32 },
+  { x: 164, y: 84, color: '#8dd5df', phase: 0.72 },
+  { x: 171, y: 81, color: '#f4cf88', phase: 0.18 },
+  { x: 178, y: 86, color: '#d6e4a5', phase: 0.84 },
+  { x: 187, y: 83, color: '#ed9d62', phase: 0.46 },
+  { x: 196, y: 87, color: '#f0c56d', phase: 0.04 },
   { x: 210, y: 74, color: '#f0c56d', phase: 0.1 },
+  { x: 214, y: 82, color: '#f4cf88', phase: 0.36 },
   { x: 220, y: 70, color: '#8dd5df', phase: 0.6 },
+  { x: 224, y: 84, color: '#d6e4a5', phase: 0.94 },
   { x: 232, y: 76, color: '#ed9d62', phase: 0.4 },
   { x: 241, y: 71, color: '#d6e4a5', phase: 0.8 },
+  { x: 244, y: 82, color: '#f0c56d', phase: 0.24 },
   { x: 254, y: 78, color: '#f0c56d', phase: 0.2 },
+  { x: 260, y: 83, color: '#f4cf88', phase: 0.58 },
   { x: 267, y: 74, color: '#95e0ee', phase: 0.7 },
+  { x: 272, y: 86, color: '#ed9d62', phase: 0.12 },
   { x: 281, y: 80, color: '#e5b05e', phase: 0.5 },
+  { x: 288, y: 84, color: '#d6e4a5', phase: 0.68 },
   { x: 294, y: 77, color: '#f4cf88', phase: 0.0 },
+  { x: 303, y: 83, color: '#8dd5df', phase: 0.88 },
 ]
 
 const foregroundTrees = [
@@ -188,6 +226,12 @@ const farTrees = [
   { x: 22, y: 88, h: 34 },
   { x: 48, y: 96, h: 24 },
   { x: 66, y: 91, h: 30 },
+  { x: 93, y: 98, h: 19 },
+  { x: 119, y: 95, h: 23 },
+  { x: 141, y: 101, h: 17 },
+  { x: 176, y: 96, h: 21 },
+  { x: 205, y: 101, h: 18 },
+  { x: 244, y: 96, h: 25 },
   { x: 278, y: 92, h: 31 },
   { x: 298, y: 88, h: 35 },
 ]
@@ -196,8 +240,8 @@ const wetRoadGlints: RoadGlint[] = [
   { x: 95, y: 150, length: 39, phase: 0.13, strength: 0.42 },
   { x: 126, y: 137, length: 47, phase: 0.61, strength: 0.34 },
   { x: 173, y: 123, length: 38, phase: 0.32, strength: 0.27 },
-  { x: 198, y: 133, length: 43, phase: 0.75, strength: 0.3 },
-  { x: 231, y: 146, length: 35, phase: 0.48, strength: 0.25 },
+  { x: 196, y: 112, length: 36, phase: 0.75, strength: 0.22 },
+  { x: 231, y: 109, length: 31, phase: 0.48, strength: 0.2 },
   { x: 78, y: 165, length: 54, phase: 0.85, strength: 0.2 },
 ]
 
@@ -208,12 +252,12 @@ const roadScratches: RoadScratch[] = [
   { x: 103, y: 137, length: 42, angle: -0.24, width: 1, alpha: 0.17 },
   { x: 138, y: 126, length: 34, angle: -0.15, width: 1, alpha: 0.14 },
   { x: 171, y: 118, length: 26, angle: 0.03, width: 1, alpha: 0.12 },
-  { x: 204, y: 121, length: 36, angle: 0.17, width: 1, alpha: 0.15 },
-  { x: 236, y: 132, length: 42, angle: 0.28, width: 1, alpha: 0.17 },
-  { x: 266, y: 144, length: 31, angle: 0.32, width: 1, alpha: 0.14 },
+  { x: 204, y: 114, length: 31, angle: 0.06, width: 1, alpha: 0.13 },
+  { x: 236, y: 110, length: 30, angle: 0.08, width: 1, alpha: 0.13 },
+  { x: 266, y: 111, length: 25, angle: 0.1, width: 1, alpha: 0.11 },
   { x: 118, y: 158, length: 58, angle: -0.06, width: 1, alpha: 0.12 },
   { x: 176, y: 140, length: 51, angle: 0.08, width: 1, alpha: 0.11 },
-  { x: 229, y: 157, length: 63, angle: 0.22, width: 1, alpha: 0.11 },
+  { x: 222, y: 121, length: 42, angle: 0.08, width: 1, alpha: 0.08 },
 ]
 
 const roadSpeedStreaks: RoadSpeedStreak[] = [
@@ -221,9 +265,9 @@ const roadSpeedStreaks: RoadSpeedStreak[] = [
   { x: 71, y: 154, length: 20, phase: 0.23, strength: 0.24, lane: 1 },
   { x: 112, y: 141, length: 28, phase: 0.39, strength: 0.28, lane: 0 },
   { x: 153, y: 130, length: 22, phase: 0.57, strength: 0.2, lane: 2 },
-  { x: 191, y: 124, length: 30, phase: 0.68, strength: 0.25, lane: 1 },
-  { x: 234, y: 136, length: 26, phase: 0.82, strength: 0.29, lane: 2 },
-  { x: 267, y: 149, length: 21, phase: 0.15, strength: 0.22, lane: 1 },
+  { x: 194, y: 115, length: 24, phase: 0.68, strength: 0.2, lane: 1 },
+  { x: 245, y: 107, length: 18, phase: 0.82, strength: 0.18, lane: 2 },
+  { x: 267, y: 112, length: 16, phase: 0.15, strength: 0.16, lane: 1 },
   { x: 128, y: 160, length: 38, phase: 0.74, strength: 0.18, lane: 0 },
 ]
 
@@ -243,9 +287,9 @@ const guardrailLightCatches: LightCatch[] = [
     span: 0.16,
     width: 1,
     points: [
-      { x: 178, y: 97 },
-      { x: 222, y: 102 },
-      { x: 273, y: 117 },
+      { x: 178, y: 96 },
+      { x: 222, y: 99 },
+      { x: 276, y: 106 },
     ],
   },
   {
@@ -263,9 +307,9 @@ const guardrailLightCatches: LightCatch[] = [
     span: 0.12,
     width: 2,
     points: [
-      { x: 188, y: 129 },
-      { x: 245, y: 141 },
-      { x: 305, y: 160 },
+      { x: 197, y: 111 },
+      { x: 250, y: 107 },
+      { x: 312, y: 111 },
     ],
   },
 ]
@@ -274,19 +318,19 @@ const roadsideMarkers: RoadsideMarker[] = [
   { x: 58, y: 121, height: 10, center: 0.2, span: 0.1, size: 1, color: 'white', layer: 'back' },
   { x: 102, y: 106, height: 9, center: 0.31, span: 0.11, size: 1, color: 'amber', layer: 'back' },
   { x: 152, y: 96, height: 8, center: 0.43, span: 0.13, size: 1, color: 'white', layer: 'back' },
-  { x: 211, y: 99, height: 9, center: 0.58, span: 0.13, size: 1, color: 'amber', layer: 'back' },
-  { x: 276, y: 117, height: 11, center: 0.72, span: 0.1, size: 1, color: 'white', layer: 'back' },
+  { x: 214, y: 102, height: 8, center: 0.58, span: 0.13, size: 1, color: 'amber', layer: 'back' },
+  { x: 277, y: 102, height: 9, center: 0.74, span: 0.1, size: 1, color: 'white', layer: 'back' },
   { x: 34, y: 168, height: 16, center: 0.14, span: 0.09, size: 2, color: 'red', layer: 'front' },
   { x: 96, y: 148, height: 18, center: 0.27, span: 0.12, size: 2, color: 'amber', layer: 'front' },
   { x: 153, y: 136, height: 19, center: 0.43, span: 0.15, size: 2, color: 'white', layer: 'front' },
   { x: 219, y: 140, height: 20, center: 0.6, span: 0.14, size: 2, color: 'amber', layer: 'front' },
-  { x: 290, y: 158, height: 22, center: 0.78, span: 0.1, size: 2, color: 'red', layer: 'front' },
+  { x: 289, y: 151, height: 18, center: 0.78, span: 0.1, size: 1, color: 'red', layer: 'front' },
 ]
 
 const chevronMarkers: ChevronMarker[] = [
-  { x: 223, y: 106, center: 0.55, span: 0.14, scale: 1 },
-  { x: 240, y: 111, center: 0.6, span: 0.14, scale: 1.08 },
-  { x: 259, y: 118, center: 0.66, span: 0.12, scale: 1.18 },
+  { x: 230, y: 102, center: 0.58, span: 0.14, scale: 0.82 },
+  { x: 250, y: 102, center: 0.64, span: 0.14, scale: 0.9 },
+  { x: 273, y: 104, center: 0.72, span: 0.12, scale: 1 },
 ]
 
 const smokePuffs: SmokePuff[] = [
@@ -411,8 +455,9 @@ const carVoxelPoses: VoxelCarPose[] = [
   },
 ]
 
-const voxelSpriteWidth = 112
-const voxelSpriteHeight = 72
+const voxelSpriteWidth = 160
+const voxelSpriteHeight = 104
+const voxelRenderScale = 1.34
 const carVoxelSpriteCache = new Map<string, HTMLCanvasElement>()
 let backgroundDetailLayerCache: HTMLCanvasElement | null = null
 let roadDetailLayerCache: HTMLCanvasElement | null = null
@@ -882,115 +927,117 @@ const carSpritePoses: CarSpritePose[] = [
   },
 ]
 
-const routeKeyframes: RouteKeyframe[] = [
+const roadControlPoints: RoadControlPoint[] = [
+  { phase: 0, center: { x: -72, y: 174 }, roadWidth: 98, depthScale: 1.36 },
+  { phase: 0.12, center: { x: -8, y: 163 }, roadWidth: 88, depthScale: 1.24 },
+  { phase: 0.28, center: { x: 82, y: 145 }, roadWidth: 68, depthScale: 1.03 },
+  { phase: 0.46, center: { x: 146, y: 126 }, roadWidth: 50, depthScale: 0.82 },
+  { phase: 0.6, center: { x: 184, y: 114 }, roadWidth: 36, depthScale: 0.63 },
+  { phase: 0.72, center: { x: 226, y: 105 }, roadWidth: 27, depthScale: 0.48 },
+  { phase: 0.84, center: { x: 284, y: 100 }, roadWidth: 19, depthScale: 0.32 },
+  { phase: 0.93, center: { x: 338, y: 102 }, roadWidth: 13, depthScale: 0.22 },
+  { phase: 1, center: { x: 354, y: 103 }, roadWidth: 11, depthScale: 0.2 },
+]
+
+const motionKeyframes: MotionKeyframe[] = [
   {
     phase: 0,
-    car: { x: -64, y: 172 },
-    carAngle: -0.3,
-    scale: 1.42,
+    progress: 0,
+    lateralOffset: 0,
     opacity: 0,
     driftLean: 0,
-    glow: 0.15,
-    slideAngle: -0.3,
+    glow: 0.12,
+    slideLag: 0,
     smokeIntensity: 0,
   },
   {
-    phase: 0.07,
-    car: { x: -45, y: 169 },
-    carAngle: -0.31,
-    scale: 1.38,
+    phase: 0.1,
+    progress: 0.02,
+    lateralOffset: 0.02,
     opacity: 0,
     driftLean: 0,
-    glow: 0.25,
-    slideAngle: -0.31,
+    glow: 0.2,
+    slideLag: 0.02,
     smokeIntensity: 0,
   },
   {
-    phase: 0.12,
-    car: { x: 8, y: 162 },
-    carAngle: -0.36,
-    scale: 1.32,
-    opacity: 0.95,
-    driftLean: 0.08,
-    glow: 0.82,
-    slideAngle: -0.42,
-    smokeIntensity: 0.25,
-  },
-  {
-    phase: 0.25,
-    car: { x: 82, y: 145 },
-    carAngle: -0.24,
-    scale: 1.12,
+    phase: 0.18,
+    progress: 0.16,
+    lateralOffset: 0.08,
     opacity: 1,
-    driftLean: 0.42,
-    glow: 0.92,
-    slideAngle: -0.58,
-    smokeIntensity: 0.68,
+    driftLean: 0.16,
+    glow: 0.82,
+    slideLag: 0.08,
+    smokeIntensity: 0.26,
   },
   {
-    phase: 0.42,
-    car: { x: 144, y: 126 },
-    carAngle: -0.08,
-    scale: 0.96,
+    phase: 0.34,
+    progress: 0.36,
+    lateralOffset: 0.18,
+    opacity: 1,
+    driftLean: 0.62,
+    glow: 0.96,
+    slideLag: 0.22,
+    smokeIntensity: 0.72,
+  },
+  {
+    phase: 0.48,
+    progress: 0.52,
+    lateralOffset: 0.34,
     opacity: 1,
     driftLean: 1,
     glow: 1,
-    slideAngle: -0.68,
+    slideLag: 0.33,
     smokeIntensity: 1,
   },
   {
-    phase: 0.56,
-    car: { x: 178, y: 116 },
-    carAngle: -0.02,
-    scale: 0.82,
-    opacity: 1,
-    driftLean: 0.82,
-    glow: 0.92,
-    slideAngle: -0.52,
-    smokeIntensity: 0.74,
-  },
-  {
-    phase: 0.68,
-    car: { x: 234, y: 127 },
-    carAngle: 0.05,
-    scale: 0.82,
-    opacity: 1,
-    driftLean: 0.36,
+    phase: 0.6,
+    progress: 0.64,
+    lateralOffset: 0.18,
+    opacity: 0.96,
+    driftLean: 0.56,
     glow: 0.72,
-    slideAngle: -0.28,
-    smokeIntensity: 0.44,
+    slideLag: 0.19,
+    smokeIntensity: 0.45,
   },
   {
-    phase: 0.8,
-    car: { x: 318, y: 146 },
-    carAngle: 0.2,
-    scale: 0.84,
-    opacity: 0.84,
-    driftLean: 0.1,
-    glow: 0.54,
-    slideAngle: 0.05,
-    smokeIntensity: 0.18,
+    phase: 0.72,
+    progress: 0.78,
+    lateralOffset: 0.04,
+    opacity: 0.74,
+    driftLean: 0.18,
+    glow: 0.34,
+    slideLag: 0.08,
+    smokeIntensity: 0.1,
   },
   {
-    phase: 0.9,
-    car: { x: 380, y: 163 },
-    carAngle: 0.28,
-    scale: 0.88,
+    phase: 0.82,
+    progress: 0.9,
+    lateralOffset: 0,
+    opacity: 0.32,
+    driftLean: 0.04,
+    glow: 0.16,
+    slideLag: 0.03,
+    smokeIntensity: 0,
+  },
+  {
+    phase: 0.86,
+    progress: 0.98,
+    lateralOffset: 0,
     opacity: 0,
     driftLean: 0,
-    glow: 0.18,
-    slideAngle: 0.44,
+    glow: 0.12,
+    slideLag: 0,
     smokeIntensity: 0,
   },
   {
     phase: 1,
-    car: { x: 380, y: 163 },
-    carAngle: 0.28,
-    scale: 0.88,
+    progress: 1,
+    lateralOffset: 0,
     opacity: 0,
     driftLean: 0,
-    glow: 0.15,
-    slideAngle: 0.28,
+    glow: 0.12,
+    slideLag: 0,
     smokeIntensity: 0,
   },
 ]
@@ -1038,9 +1085,13 @@ function cubicHermite(
   )
 }
 
-function getRouteSlope(index: number, readValue: (keyframe: RouteKeyframe) => number) {
-  const previous = routeKeyframes[Math.max(0, index - 1)]
-  const next = routeKeyframes[Math.min(routeKeyframes.length - 1, index + 1)]
+function getKeyframeSlope<T extends { phase: number }>(
+  keyframes: T[],
+  index: number,
+  readValue: (keyframe: T) => number
+) {
+  const previous = keyframes[Math.max(0, index - 1)]
+  const next = keyframes[Math.min(keyframes.length - 1, index + 1)]
   const duration = next.phase - previous.phase
 
   if (duration <= 0) {
@@ -1050,39 +1101,139 @@ function getRouteSlope(index: number, readValue: (keyframe: RouteKeyframe) => nu
   return (readValue(next) - readValue(previous)) / duration
 }
 
-function sampleRouteValue(
-  routePhase: number,
+function sampleKeyframeValue<T extends { phase: number }>(
+  keyframes: T[],
+  phase: number,
   segmentIndex: number,
-  readValue: (keyframe: RouteKeyframe) => number
+  readValue: (keyframe: T) => number
 ) {
-  const start = routeKeyframes[segmentIndex]
-  const end = routeKeyframes[segmentIndex + 1]
+  const start = keyframes[segmentIndex]
+  const end = keyframes[segmentIndex + 1]
   const duration = end.phase - start.phase
 
   if (duration <= 0) {
     return readValue(start)
   }
 
-  const amount = clamp((routePhase - start.phase) / duration, 0, 1)
+  const amount = clamp((phase - start.phase) / duration, 0, 1)
 
   return cubicHermite(
     readValue(start),
     readValue(end),
-    getRouteSlope(segmentIndex, readValue),
-    getRouteSlope(segmentIndex + 1, readValue),
+    getKeyframeSlope(keyframes, segmentIndex, readValue),
+    getKeyframeSlope(keyframes, segmentIndex + 1, readValue),
     duration,
     amount
   )
 }
 
-function getRouteSegmentIndex(routePhase: number) {
-  const segmentIndex = routeKeyframes.findIndex((keyframe, index) => {
-    const next = routeKeyframes[index + 1]
+function getKeyframeSegmentIndex<T extends { phase: number }>(keyframes: T[], phase: number) {
+  const segmentIndex = keyframes.findIndex((keyframe, index) => {
+    const next = keyframes[index + 1]
 
-    return next ? routePhase >= keyframe.phase && routePhase <= next.phase : false
+    return next ? phase >= keyframe.phase && phase <= next.phase : false
   })
 
-  return segmentIndex === -1 ? routeKeyframes.length - 2 : segmentIndex
+  return segmentIndex === -1 ? keyframes.length - 2 : segmentIndex
+}
+
+function sampleMotionValue(phase: number, readValue: (keyframe: MotionKeyframe) => number) {
+  return sampleKeyframeValue(
+    motionKeyframes,
+    phase,
+    getKeyframeSegmentIndex(motionKeyframes, phase),
+    readValue
+  )
+}
+
+function sampleRoadValue(progress: number, readValue: (keyframe: RoadControlPoint) => number) {
+  return sampleKeyframeValue(
+    roadControlPoints,
+    progress,
+    getKeyframeSegmentIndex(roadControlPoints, progress),
+    readValue
+  )
+}
+
+function sampleRoadCenter(progress: number) {
+  const clampedProgress = clamp(progress, 0, 1)
+
+  return {
+    x: sampleRoadValue(clampedProgress, (keyframe) => keyframe.center.x),
+    y: sampleRoadValue(clampedProgress, (keyframe) => keyframe.center.y),
+  }
+}
+
+function sampleRoad(progress: number): RoadSample {
+  const clampedProgress = clamp(progress, 0, 1)
+  const center = sampleRoadCenter(clampedProgress)
+  const previous = sampleRoadCenter(clamp(clampedProgress - 0.006, 0, 1))
+  const next = sampleRoadCenter(clamp(clampedProgress + 0.006, 0, 1))
+  const tangentLength = Math.hypot(next.x - previous.x, next.y - previous.y) || 1
+  const tangent = {
+    x: (next.x - previous.x) / tangentLength,
+    y: (next.y - previous.y) / tangentLength,
+  }
+  const normal = {
+    x: -tangent.y,
+    y: tangent.x,
+  }
+  const roadWidth = sampleRoadValue(clampedProgress, (keyframe) => keyframe.roadWidth)
+  const depthScale = sampleRoadValue(clampedProgress, (keyframe) => keyframe.depthScale)
+  const halfWidth = roadWidth / 2
+
+  return {
+    center,
+    depthScale,
+    lowerEdge: {
+      x: center.x + normal.x * halfWidth,
+      y: center.y + normal.y * halfWidth,
+    },
+    normal,
+    progress: clampedProgress,
+    roadWidth,
+    tangent,
+    upperEdge: {
+      x: center.x - normal.x * halfWidth,
+      y: center.y - normal.y * halfWidth,
+    },
+  }
+}
+
+function getRoadSamples(count = 32) {
+  return Array.from({ length: count }, (_, index) => sampleRoad(index / (count - 1)))
+}
+
+function sampleRoadOffset(progress: number, lateralOffset: number) {
+  const road = sampleRoad(progress)
+
+  return {
+    x: road.center.x + road.normal.x * road.roadWidth * lateralOffset,
+    y: road.center.y + road.normal.y * road.roadWidth * lateralOffset,
+  }
+}
+
+function getForegroundRailSamples(count = 28): ForegroundRailSample[] {
+  return Array.from({ length: count }, (_, index) => {
+    const amount = index / (count - 1)
+    const progress = lerp(0.1, 0.9, amount)
+    const road = sampleRoad(progress)
+    const depth = road.depthScale
+    const railOffset = 2 + depth * 3
+    const foregroundDrop = 1 + depth * 2.5
+    const foregroundLift = smoothstep((0.38 - progress) / 0.24) * (27 + depth * 13)
+
+    return {
+      depthScale: depth,
+      normal: road.normal,
+      point: {
+        x: road.lowerEdge.x + road.normal.x * railOffset,
+        y: road.lowerEdge.y + road.normal.y * railOffset + foregroundDrop - foregroundLift,
+      },
+      progress,
+      tangent: road.tangent,
+    }
+  }).filter((sample) => sample.point.x > -34 && sample.point.x < sceneWidth + 34)
 }
 
 function pulseNear(phase: number, center: number, span: number) {
@@ -1323,16 +1474,18 @@ function getRoadDetailLayer() {
     )
   })
 
-  for (let index = 0; index < 26; index += 1) {
-    const t = index / 25
-    const edgeX = lerp(4, 319, t)
-    const edgeY = 151 - Math.sin(t * Math.PI) * 59 + t * 21
+  for (let index = 0; index < 34; index += 1) {
+    const progress = 0.08 + (index / 33) * 0.78
+    const sample = sampleRoad(progress)
+    const chip = index % 2 === 0 ? sample.upperEdge : sample.lowerEdge
+    const jitter = Math.sin(index * 1.9)
+    const size = Math.max(1, Math.round(sample.depthScale * 3))
 
     pixelRect(
       context,
-      edgeX + Math.sin(t * 17) * 5,
-      edgeY + Math.cos(t * 9) * 2,
-      index % 3 === 0 ? 4 : 2,
+      chip.x + sample.tangent.x * jitter * 3,
+      chip.y + sample.tangent.y * jitter * 3,
+      index % 3 === 0 ? size + 1 : size,
       1,
       index % 4 === 0 ? 'rgba(180, 190, 192, 0.18)' : 'rgba(7, 11, 20, 0.24)'
     )
@@ -1442,11 +1595,11 @@ function getCarVoxelPose(phase: number) {
     return carVoxelPoses[0]
   }
 
-  if (phase < 0.57) {
+  if (phase < 0.58) {
     return carVoxelPoses[1]
   }
 
-  if (phase < 0.74) {
+  if (phase < 0.68) {
     return carVoxelPoses[2]
   }
 
@@ -1456,8 +1609,8 @@ function getCarVoxelPose(phase: number) {
 function getCarVoxelPoseFrames(phase: number): VoxelPoseFrame[] {
   const transitions = [
     { from: 0, to: 1, start: 0.24, end: 0.31 },
-    { from: 1, to: 2, start: 0.53, end: 0.61 },
-    { from: 2, to: 3, start: 0.7, end: 0.79 },
+    { from: 1, to: 2, start: 0.54, end: 0.62 },
+    { from: 2, to: 3, start: 0.66, end: 0.74 },
   ]
   const transition = transitions.find(({ start, end }) => phase >= start && phase <= end)
 
@@ -1480,8 +1633,8 @@ function projectVoxelPoint(point: VoxelPoint, pose: VoxelCarPose) {
   const yawY = point.x * sin + point.y * cos
 
   return {
-    x: voxelSpriteWidth / 2 + yawX + yawY * 0.34,
-    y: 46 + yawY * 0.38 - point.z * 0.74,
+    x: voxelSpriteWidth / 2 + (yawX + yawY * 0.34) * voxelRenderScale,
+    y: 68 + (yawY * 0.38 - point.z * 0.74) * voxelRenderScale,
   }
 }
 
@@ -1639,7 +1792,7 @@ function drawVoxelFace(context: CanvasRenderingContext2D, face: ProjectedVoxelFa
   context.save()
   context.globalAlpha = context.globalAlpha * face.alpha
   fillPolygon(context, face.points, face.color)
-  strokePolyline(context, face.points, 'rgba(2, 3, 8, 0.22)', 1, true)
+  strokePolyline(context, face.points, 'rgba(2, 3, 8, 0.22)', voxelRenderScale, true)
   context.restore()
 }
 
@@ -1661,7 +1814,7 @@ function drawVoxelProjectedLine(
     projectedEnd.x,
     projectedEnd.y,
     color,
-    width
+    width * voxelRenderScale
   )
 }
 
@@ -1675,7 +1828,14 @@ function drawVoxelProjectedRect(
 ) {
   const projected = projectVoxelPoint(point, pose)
 
-  pixelRect(context, projected.x - width / 2, projected.y - height / 2, width, height, color)
+  pixelRect(
+    context,
+    projected.x - (width * voxelRenderScale) / 2,
+    projected.y - (height * voxelRenderScale) / 2,
+    width * voxelRenderScale,
+    height * voxelRenderScale,
+    color
+  )
 }
 
 function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPose) {
@@ -1915,10 +2075,10 @@ function getCarVoxelSprite(pose: VoxelCarPose) {
   context.imageSmoothingEnabled = false
 
   const shadowPoints = [
-    { x: 23, y: 50 },
-    { x: 86, y: 46 },
-    { x: 97, y: 52 },
-    { x: 36, y: 59 },
+    { x: 46, y: 75 },
+    { x: 124, y: 70 },
+    { x: 139, y: 79 },
+    { x: 60, y: 88 },
   ]
 
   fillPolygon(context, shadowPoints, 'rgba(2, 4, 10, 0.42)')
@@ -1969,44 +2129,57 @@ function getWheelFrame(phase: number, driftLean: number, opacity: number) {
 
 function getDriftState(phase: number): DriftState {
   const routePhase = clamp(phase, 0, 1)
-  const segmentIndex = getRouteSegmentIndex(routePhase)
+  const progress = clamp(
+    sampleMotionValue(routePhase, (keyframe) => keyframe.progress),
+    0,
+    1
+  )
+  const road = sampleRoad(progress)
   const driftLean = clamp(
-    sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.driftLean),
+    sampleMotionValue(routePhase, (keyframe) => keyframe.driftLean),
     0,
     1
   )
-  const driftSway = Math.sin(routePhase * Math.PI * 2) * 1.3 * driftLean
+  const driftSway = Math.sin(routePhase * Math.PI * 2) * 0.035 * driftLean
+  const lateralOffset =
+    sampleMotionValue(routePhase, (keyframe) => keyframe.lateralOffset) + driftSway
   const opacity = clamp(
-    sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.opacity),
+    sampleMotionValue(routePhase, (keyframe) => keyframe.opacity),
     0,
     1
   )
+  const carAngle =
+    Math.atan2(road.tangent.y, road.tangent.x) -
+    driftLean * 0.1 +
+    sampleMotionValue(routePhase, (keyframe) => keyframe.slideLag) * 0.1
+  const slideProgress = clamp(
+    progress - sampleMotionValue(routePhase, (keyframe) => keyframe.slideLag),
+    0,
+    1
+  )
+  const slideRoad = sampleRoad(slideProgress)
   const state: DriftState = {
     bodyRoll: getBodyRoll(routePhase, driftLean),
     car: {
-      x: sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.car.x),
-      y: sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.car.y) + driftSway,
+      x: road.center.x + road.normal.x * road.roadWidth * lateralOffset,
+      y: road.center.y + road.normal.y * road.roadWidth * lateralOffset,
     },
-    carAngle: sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.carAngle),
+    carAngle,
     driftLean,
     glow:
       clamp(
-        sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.glow),
+        sampleMotionValue(routePhase, (keyframe) => keyframe.glow),
         0,
         1.1
       ) +
       Math.sin(routePhase * Math.PI * 10) * 0.05,
     opacity,
     phase: routePhase,
-    scale: clamp(
-      sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.scale),
-      0.65,
-      1.5
-    ),
-    slideAngle: sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.slideAngle),
+    scale: clamp(road.depthScale * (1 + driftLean * 0.04), 0.16, 1.5),
+    slideAngle: Math.atan2(slideRoad.tangent.y, slideRoad.tangent.x) - driftLean * 0.34,
     smoke: { x: 0, y: 0 },
     smokeIntensity: clamp(
-      sampleRouteValue(routePhase, segmentIndex, (keyframe) => keyframe.smokeIntensity),
+      sampleMotionValue(routePhase, (keyframe) => keyframe.smokeIntensity),
       0,
       1
     ),
@@ -2063,6 +2236,72 @@ function drawSky(context: CanvasRenderingContext2D, phase: number) {
   pixelLine(context, 119, 76, 163, 92, 'rgba(111, 127, 151, 0.12)')
   pixelLine(context, 201, 79, 253, 96, 'rgba(94, 110, 139, 0.14)')
   pixelLine(context, 265, 83, 314, 96, 'rgba(103, 119, 144, 0.1)')
+
+  fillPolygon(
+    context,
+    [
+      { x: 151, y: 91 },
+      { x: 158, y: 86 },
+      { x: 164, y: 89 },
+      { x: 171, y: 84 },
+      { x: 179, y: 90 },
+      { x: 188, y: 86 },
+      { x: 199, y: 91 },
+      { x: 209, y: 85 },
+      { x: 219, y: 90 },
+      { x: 231, y: 86 },
+      { x: 242, y: 91 },
+      { x: 258, y: 87 },
+      { x: 276, y: 92 },
+      { x: 302, y: 88 },
+      { x: 320, y: 94 },
+      { x: 320, y: 107 },
+      { x: 151, y: 107 },
+    ],
+    'rgba(8, 16, 25, 0.42)'
+  )
+  ;[
+    { x: 164, y: 87, w: 5, h: 8 },
+    { x: 185, y: 86, w: 4, h: 10 },
+    { x: 212, y: 84, w: 6, h: 12 },
+    { x: 238, y: 88, w: 5, h: 8 },
+    { x: 266, y: 86, w: 4, h: 10 },
+    { x: 292, y: 87, w: 6, h: 9 },
+  ].forEach((building, index) => {
+    pixelRect(
+      context,
+      building.x,
+      building.y,
+      building.w,
+      building.h,
+      index % 2 === 0 ? 'rgba(6, 13, 22, 0.52)' : 'rgba(9, 18, 28, 0.44)'
+    )
+  })
+  strokePolyline(
+    context,
+    [
+      { x: 148, y: 96 },
+      { x: 169, y: 93 },
+      { x: 191, y: 97 },
+      { x: 215, y: 94 },
+      { x: 238, y: 98 },
+      { x: 263, y: 95 },
+      { x: 295, y: 99 },
+    ],
+    'rgba(71, 91, 109, 0.2)',
+    1
+  )
+  ;[
+    { x: 151, y: 95, color: '#e5b05e' },
+    { x: 176, y: 94, color: '#95e0ee' },
+    { x: 203, y: 96, color: '#f4cf88' },
+    { x: 229, y: 95, color: '#ed9d62' },
+    { x: 257, y: 97, color: '#d6e4a5' },
+    { x: 286, y: 98, color: '#f0c56d' },
+  ].forEach((marker, index) => {
+    const twinkle = 0.5 + 0.5 * Math.sin((phase + index * 0.157) * Math.PI * 2)
+    pixelRect(context, marker.x, marker.y, twinkle > 0.35 ? 2 : 1, 1, marker.color)
+  })
 
   valleyLights.forEach((light) => {
     const twinkle = 0.45 + 0.55 * Math.sin((phase + light.phase) * Math.PI * 2)
@@ -2154,124 +2393,89 @@ function drawTrees(context: CanvasRenderingContext2D, phase: number) {
 }
 
 function drawRoad(context: CanvasRenderingContext2D, phase: number) {
-  fillPolygon(
-    context,
-    [
-      { x: 0, y: 180 },
-      { x: 0, y: 149 },
-      { x: 57, y: 125 },
-      { x: 111, y: 105 },
-      { x: 156, y: 91 },
-      { x: 204, y: 88 },
-      { x: 252, y: 98 },
-      { x: 320, y: 123 },
-      { x: 320, y: 180 },
-    ],
-    '#202738'
-  )
-  fillPolygon(
-    context,
-    [
-      { x: 0, y: 180 },
-      { x: 0, y: 160 },
-      { x: 68, y: 133 },
-      { x: 129, y: 112 },
-      { x: 173, y: 101 },
-      { x: 213, y: 101 },
-      { x: 266, y: 113 },
-      { x: 320, y: 134 },
-      { x: 320, y: 180 },
-    ],
-    '#171d2c'
-  )
+  const samples = getRoadSamples(34)
+  const upperEdge = samples.map((sample) => sample.upperEdge)
+  const lowerEdge = samples.map((sample) => sample.lowerEdge)
+  const roadPolygon = [...upperEdge, ...lowerEdge.slice().reverse()]
+  const innerUpper = samples.map((sample) => ({
+    x: sample.center.x - sample.normal.x * sample.roadWidth * 0.34,
+    y: sample.center.y - sample.normal.y * sample.roadWidth * 0.34,
+  }))
+  const innerLower = samples.map((sample) => ({
+    x: sample.center.x + sample.normal.x * sample.roadWidth * 0.34,
+    y: sample.center.y + sample.normal.y * sample.roadWidth * 0.34,
+  }))
 
+  fillPolygon(context, roadPolygon, '#202738')
+  fillPolygon(context, [...innerUpper, ...innerLower.slice().reverse()], '#171d2c')
+
+  samples.slice(1).forEach((sample, index) => {
+    const previous = samples[index]
+    const depth = 1 - sample.progress
+    const bandAlpha = 0.014 + depth * 0.024
+
+    if (index % 3 === 0) {
+      fillPolygon(
+        context,
+        [previous.upperEdge, sample.upperEdge, sample.lowerEdge, previous.lowerEdge],
+        `rgba(255, 255, 255, ${bandAlpha})`
+      )
+    }
+  })
+
+  strokePolyline(context, upperEdge, '#49566a', 2)
+  strokePolyline(context, lowerEdge, '#4a5264', 1)
   strokePolyline(
     context,
-    [
-      { x: 3, y: 153 },
-      { x: 58, y: 130 },
-      { x: 117, y: 109 },
-      { x: 160, y: 97 },
-      { x: 205, y: 95 },
-      { x: 256, y: 106 },
-      { x: 320, y: 129 },
-    ],
-    '#394458',
-    3
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 2, y: 164 },
-      { x: 72, y: 137 },
-      { x: 136, y: 116 },
-      { x: 176, y: 107 },
-      { x: 214, y: 108 },
-      { x: 269, y: 120 },
-      { x: 320, y: 139 },
-    ],
-    '#4a5264',
+    samples.map((sample) => ({
+      x: sample.center.x - sample.normal.x * sample.roadWidth * 0.08,
+      y: sample.center.y - sample.normal.y * sample.roadWidth * 0.08,
+    })),
+    'rgba(92, 105, 125, 0.34)',
     1
   )
 
   for (let dash = 0; dash < 9; dash += 1) {
-    const travel = (dash + 0.45) / 9
+    const progress = 0.1 + dash * 0.092
+    const sample = sampleRoad(progress)
     const shimmer = Math.sin((phase + dash / 9) * Math.PI * 2)
-    const y = 171 - travel * 70
-    const x = 45 + travel * 187 + Math.sin(travel * Math.PI) * 30 + shimmer * 1.4
-    const dashWidth = 10 - travel * 6
-    const color = travel > 0.56 ? '#5f6674' : '#848b93'
+    const dashCenter = sampleRoadOffset(progress, 0.02 + shimmer * 0.01)
+    const dashLength = Math.max(2, sample.roadWidth * 0.14)
+    const dashEnd = {
+      x: dashCenter.x + sample.tangent.x * dashLength,
+      y: dashCenter.y + sample.tangent.y * dashLength,
+    }
+    const color = progress > 0.62 ? '#5f6674' : '#848b93'
 
-    pixelLine(context, x, y + shimmer * 0.4, x + dashWidth, y - 2, color, travel > 0.35 ? 1 : 2)
+    pixelLine(
+      context,
+      dashCenter.x,
+      dashCenter.y,
+      dashEnd.x,
+      dashEnd.y,
+      color,
+      progress > 0.35 ? 1 : 2
+    )
   }
 
-  strokePolyline(
-    context,
-    [
-      { x: 25, y: 171 },
-      { x: 78, y: 149 },
-      { x: 125, y: 132 },
-      { x: 160, y: 121 },
-    ],
-    'rgba(7, 10, 18, 0.48)',
-    2
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 45, y: 169 },
-      { x: 100, y: 146 },
-      { x: 148, y: 127 },
-      { x: 182, y: 116 },
-    ],
-    'rgba(54, 64, 80, 0.42)',
-    1
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 72, y: 160 },
-      { x: 113, y: 145 },
-      { x: 152, y: 134 },
-      { x: 190, y: 132 },
-      { x: 232, y: 142 },
-      { x: 289, y: 160 },
-    ],
-    'rgba(6, 10, 18, 0.3)',
-    1
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 87, y: 155 },
-      { x: 126, y: 141 },
-      { x: 164, y: 132 },
-      { x: 203, y: 135 },
-      { x: 251, y: 149 },
-    ],
-    'rgba(99, 113, 128, 0.18)',
-    1
-  )
+  ;[0.17, 0.29, 0.41, 0.56, 0.71].forEach((progress, index) => {
+    const sample = sampleRoad(progress)
+    const scratchStart = sampleRoadOffset(progress, 0.2 - index * 0.05)
+    const scratchEnd = {
+      x: scratchStart.x + sample.tangent.x * sample.roadWidth * (0.28 - index * 0.025),
+      y: scratchStart.y + sample.tangent.y * sample.roadWidth * (0.28 - index * 0.025),
+    }
+
+    pixelLine(
+      context,
+      scratchStart.x,
+      scratchStart.y,
+      scratchEnd.x,
+      scratchEnd.y,
+      index % 2 === 0 ? 'rgba(7, 10, 18, 0.48)' : 'rgba(99, 113, 128, 0.2)',
+      1
+    )
+  })
 
   wetRoadGlints.forEach((glint) => {
     const shimmer = 0.5 + 0.5 * Math.sin((phase + glint.phase) * Math.PI * 2)
@@ -2292,128 +2496,205 @@ function drawRoad(context: CanvasRenderingContext2D, phase: number) {
   })
 
   const roadHighlight = 0.4 + 0.3 * Math.sin(phase * Math.PI * 2)
-  pixelRect(context, 101, 132, 63, 2, `rgba(146, 170, 187, ${roadHighlight})`)
-  pixelRect(context, 179, 110, 48, 1, 'rgba(170, 180, 181, 0.28)')
-  pixelRect(context, 182, 130, 33, 1, `rgba(222, 228, 222, ${0.12 + roadHighlight * 0.14})`)
-  pixelRect(context, 55, 151, 21, 1, 'rgba(164, 180, 190, 0.14)')
-  pixelRect(context, 250, 136, 19, 1, 'rgba(132, 151, 166, 0.16)')
+  ;[0.38, 0.56, 0.74].forEach((progress, index) => {
+    const sample = sampleRoad(progress)
+    const start = sampleRoadOffset(progress, -0.2 + index * 0.11)
+    const end = {
+      x: start.x + sample.tangent.x * sample.roadWidth * 0.32,
+      y: start.y + sample.tangent.y * sample.roadWidth * 0.32,
+    }
+
+    pixelLine(
+      context,
+      start.x,
+      start.y,
+      end.x,
+      end.y,
+      `rgba(166, 184, 197, ${0.12 + roadHighlight * 0.18})`,
+      1
+    )
+  })
 }
 
 function drawGuardrails(context: CanvasRenderingContext2D, phase: number) {
   const shine = 0.5 + 0.45 * Math.sin(phase * Math.PI * 2)
+  const samples = getRoadSamples(30)
+  const upperRail = samples.map((sample) => ({
+    x: sample.upperEdge.x - sample.normal.x * (4 + sample.depthScale * 2),
+    y: sample.upperEdge.y - sample.normal.y * (4 + sample.depthScale * 2),
+  }))
+  const lowerRail = samples.slice(0, 22).map((sample) => ({
+    x: sample.lowerEdge.x + sample.normal.x * (3 + sample.depthScale * 2),
+    y: sample.lowerEdge.y + sample.normal.y * (3 + sample.depthScale * 2),
+  }))
 
-  strokePolyline(
-    context,
-    [
-      { x: 0, y: 138 },
-      { x: 49, y: 118 },
-      { x: 96, y: 103 },
-      { x: 137, y: 94 },
-      { x: 178, y: 91 },
-      { x: 222, y: 97 },
-      { x: 276, y: 113 },
-      { x: 320, y: 128 },
-    ],
-    '#96a0a9',
-    2
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 0, y: 143 },
-      { x: 49, y: 122 },
-      { x: 96, y: 107 },
-      { x: 137, y: 99 },
-      { x: 178, y: 96 },
-      { x: 222, y: 102 },
-      { x: 276, y: 118 },
-      { x: 320, y: 133 },
-    ],
-    `rgba(208, 220, 222, ${shine})`,
-    1
-  )
+  strokePolyline(context, upperRail, '#96a0a9', 2)
+  strokePolyline(context, upperRail, `rgba(208, 220, 222, ${shine})`, 1)
+  strokePolyline(context, lowerRail, 'rgba(57, 68, 82, 0.78)', 2)
+  strokePolyline(context, lowerRail, `rgba(180, 194, 199, ${0.25 + shine * 0.22})`, 1)
 
-  for (let index = 0; index < 11; index += 1) {
-    const t = index / 10
-    const x = t * 320
-    const y = 140 - Math.sin(t * Math.PI) * 48 + t * 4
+  for (let index = 2; index < samples.length; index += 3) {
+    const sample = samples[index]
+    const postTop = {
+      x: sample.upperEdge.x - sample.normal.x * (4 + sample.depthScale * 2),
+      y: sample.upperEdge.y - sample.normal.y * (4 + sample.depthScale * 2),
+    }
+    const postHeight = 5 + sample.depthScale * 9
 
-    pixelLine(context, x, y, x - 1, y + 11, '#52606a', 1)
-    pixelRect(context, x - 1, y - 1, 3, 1, 'rgba(210, 220, 218, 0.42)')
+    pixelLine(context, postTop.x, postTop.y, postTop.x - 1, postTop.y + postHeight, '#52606a', 1)
+    pixelRect(context, postTop.x - 1, postTop.y - 1, 3, 1, 'rgba(210, 220, 218, 0.42)')
     if (index % 2 === 0) {
-      pixelRect(context, x + 1, y + 2, 1, 1, 'rgba(255, 224, 132, 0.5)')
+      pixelRect(context, postTop.x + 1, postTop.y + 2, 1, 1, 'rgba(255, 224, 132, 0.5)')
     }
   }
 
-  for (let index = 0; index < 18; index += 1) {
-    const t = index / 17
-    const x = lerp(8, 314, t)
-    const y = 138 - Math.sin(t * Math.PI) * 44 + t * 5
+  for (let index = 1; index < lowerRail.length; index += 3) {
+    const point = lowerRail[index]
+    const sample = samples[index]
+    const postHeight = 4 + sample.depthScale * 7
 
-    pixelRect(context, x, y - 1, 1, 1, index % 3 === 0 ? '#d9e1df' : '#6f7b86')
+    pixelLine(context, point.x, point.y, point.x - 1, point.y + postHeight, '#303b49', 1)
+    pixelRect(context, point.x - 1, point.y - 1, 3, 1, 'rgba(210, 220, 218, 0.28)')
   }
 }
 
 function drawForegroundGuardrail(context: CanvasRenderingContext2D, phase: number) {
   const shine = 0.38 + 0.36 * Math.sin((phase + 0.21) * Math.PI * 2)
+  const railSamples = getForegroundRailSamples(30)
 
-  strokePolyline(
-    context,
-    [
-      { x: 0, y: 184 },
-      { x: 62, y: 160 },
-      { x: 126, y: 141 },
-      { x: 183, y: 134 },
-      { x: 245, y: 146 },
-      { x: 320, y: 171 },
-    ],
-    'rgba(4, 7, 14, 0.82)',
-    4
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 0, y: 181 },
-      { x: 62, y: 157 },
-      { x: 126, y: 138 },
-      { x: 183, y: 131 },
-      { x: 245, y: 143 },
-      { x: 320, y: 168 },
-    ],
-    '#65717e',
-    2
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 0, y: 179 },
-      { x: 62, y: 155 },
-      { x: 126, y: 136 },
-      { x: 183, y: 129 },
-      { x: 245, y: 141 },
-      { x: 320, y: 166 },
-    ],
-    `rgba(218, 226, 224, ${shine})`,
-    1
-  )
-
-  for (let index = 0; index < 8; index += 1) {
-    const t = index / 7
-    const x = lerp(9, 306, t)
-    const y = 181 - Math.sin(t * Math.PI) * 47 + t * 6
-
-    pixelLine(context, x, y, x - 1, y + 16 + t * 7, '#303b49', 2)
-    pixelLine(context, x + 1, y + 1, x, y + 13 + t * 6, '#7e8a92', 1)
-    pixelRect(context, x - 2, y - 1, 4, 1, `rgba(229, 236, 229, ${0.32 + shine * 0.2})`)
+  if (railSamples.length < 2) {
+    return
   }
 
-  for (let index = 0; index < 15; index += 1) {
-    const t = index / 14
-    const x = lerp(14, 314, t)
-    const y = 179 - Math.sin(t * Math.PI) * 44 + t * 5
+  const railPoints = railSamples.map((sample) => sample.point)
+  const lowerRailPoints = railSamples.map((sample) => ({
+    x: sample.point.x + sample.normal.x * (7 + sample.depthScale * 6),
+    y: sample.point.y + sample.normal.y * (7 + sample.depthScale * 6) + sample.depthScale * 2,
+  }))
+  const shadowPoints = [
+    ...railSamples.map((sample) => sample.point),
+    ...railSamples
+      .slice()
+      .reverse()
+      .map((sample) => ({
+        x: sample.point.x + sample.normal.x * (8 + sample.depthScale * 10),
+        y: sample.point.y + sample.normal.y * (8 + sample.depthScale * 10) + sample.depthScale * 3,
+      })),
+  ]
 
-    pixelRect(context, x, y - 2, 2, 1, index % 4 === 0 ? '#e6ece8' : '#76828e')
-  }
+  fillPolygon(context, shadowPoints, 'rgba(1, 4, 10, 0.38)')
+
+  railSamples.slice(1).forEach((sample, index) => {
+    const previous = railSamples[index]
+    const previousLower = lowerRailPoints[index]
+    const lower = lowerRailPoints[index + 1]
+    const width = Math.max(1, Math.round(1 + sample.depthScale * 2.1))
+    const highlightWidth = Math.max(1, Math.round(sample.depthScale * 1.1))
+
+    pixelLine(
+      context,
+      previousLower.x,
+      previousLower.y,
+      lower.x,
+      lower.y,
+      'rgba(18, 25, 34, 0.92)',
+      Math.max(1, width)
+    )
+    pixelLine(
+      context,
+      previousLower.x,
+      previousLower.y - 1,
+      lower.x,
+      lower.y - 1,
+      `rgba(111, 126, 138, ${0.16 + shine * 0.16})`,
+      1
+    )
+    pixelLine(
+      context,
+      previous.point.x,
+      previous.point.y + 3,
+      sample.point.x,
+      sample.point.y + 3,
+      'rgba(2, 5, 12, 0.88)',
+      width + 2
+    )
+    pixelLine(
+      context,
+      previous.point.x,
+      previous.point.y,
+      sample.point.x,
+      sample.point.y,
+      '#64707c',
+      width
+    )
+    pixelLine(
+      context,
+      previous.point.x,
+      previous.point.y - 2,
+      sample.point.x,
+      sample.point.y - 2,
+      `rgba(219, 229, 226, ${0.28 + shine * 0.35})`,
+      highlightWidth
+    )
+  })
+
+  railSamples.forEach((sample, index) => {
+    if (index % 3 !== 1) {
+      return
+    }
+
+    const depth = sample.depthScale
+    const postEnd = lowerRailPoints[index]
+    const postFoot = {
+      x: postEnd.x + sample.normal.x * (5 + depth * 8),
+      y: postEnd.y + sample.normal.y * (5 + depth * 8) + depth * 2,
+    }
+    const postWidth = Math.max(1, Math.round(depth * 1.6))
+    const reflectorAlpha = 0.28 + shine * 0.34
+
+    pixelLine(context, sample.point.x, sample.point.y, postEnd.x, postEnd.y, '#273342', postWidth)
+    pixelLine(
+      context,
+      sample.point.x + 1,
+      sample.point.y,
+      postEnd.x + 1,
+      postEnd.y - 2,
+      `rgba(132, 148, 157, ${0.44 + depth * 0.22})`,
+      1
+    )
+    pixelLine(
+      context,
+      postEnd.x,
+      postEnd.y,
+      postFoot.x,
+      postFoot.y,
+      `rgba(12, 18, 27, ${0.36 + depth * 0.16})`,
+      postWidth
+    )
+    pixelRect(
+      context,
+      sample.point.x - 2,
+      sample.point.y - 3,
+      Math.max(2, Math.round(depth * 4)),
+      1,
+      index % 4 === 1
+        ? `rgba(255, 199, 91, ${reflectorAlpha})`
+        : `rgba(230, 238, 232, ${reflectorAlpha})`
+    )
+  })
+
+  railPoints
+    .filter((_, index) => index % 4 === 0)
+    .forEach((point, index) => {
+      pixelRect(
+        context,
+        point.x + index,
+        point.y - 1,
+        index % 2 === 0 ? 4 : 2,
+        1,
+        index % 3 === 0 ? '#e6ece8' : '#76828e'
+      )
+    })
 }
 
 function drawFog(context: CanvasRenderingContext2D, phase: number, reducedMotion: boolean) {
@@ -2439,16 +2720,14 @@ function drawFog(context: CanvasRenderingContext2D, phase: number, reducedMotion
 }
 
 function traceRoadSurfaceClip(context: CanvasRenderingContext2D) {
+  const samples = getRoadSamples(34)
+
   tracePolygon(context, [
-    { x: 0, y: 180 },
-    { x: 0, y: 149 },
-    { x: 57, y: 125 },
-    { x: 111, y: 105 },
-    { x: 156, y: 91 },
-    { x: 204, y: 88 },
-    { x: 252, y: 98 },
-    { x: 320, y: 123 },
-    { x: 320, y: 180 },
+    ...samples.map((sample) => sample.upperEdge),
+    ...samples
+      .slice()
+      .reverse()
+      .map((sample) => sample.lowerEdge),
   ])
 }
 
@@ -2457,17 +2736,25 @@ function drawHeadlights(context: CanvasRenderingContext2D, state: DriftState) {
     return
   }
 
-  const scale = Math.max(0.45, state.scale)
+  const distantExit = smoothstep((state.phase - 0.62) / 0.2)
+  const scale = state.phase > 0.62 ? Math.max(0.22, state.scale) : Math.max(0.45, state.scale)
+  const beamReach = 1 - distantExit * 0.5
+  const beamWidth = 1 - distantExit * 0.34
   const startLeft = rotatePoint(25 * state.scale, -5 * state.scale, state.carAngle)
   const startRight = rotatePoint(27 * state.scale, 3.5 * state.scale, state.carAngle)
   const beamTip = rotatePoint(
-    (86 + state.driftLean * 20) * scale,
-    -2 * scale,
+    (86 + state.driftLean * 20) * scale * beamReach,
+    -2 * scale * beamWidth,
     state.carAngle + 0.18
   )
-  const sideTip = rotatePoint(63 * scale, (18 + state.driftLean * 8) * scale, state.carAngle + 0.04)
-  const alpha = (0.13 + state.glow * 0.12) * state.opacity
-  const laneSweep = clamp(state.driftLean * 0.55 + state.glow * 0.25, 0, 1)
+  const sideTip = rotatePoint(
+    63 * scale * beamReach,
+    (18 + state.driftLean * 8) * scale * beamWidth,
+    state.carAngle + 0.04
+  )
+  const alpha = (0.13 + state.glow * 0.12) * state.opacity * (1 - distantExit * 0.45)
+  const laneSweep =
+    clamp(state.driftLean * 0.55 + state.glow * 0.25, 0, 1) * (1 - distantExit * 0.5)
 
   context.save()
   traceRoadSurfaceClip(context)
@@ -2497,11 +2784,11 @@ function drawHeadlights(context: CanvasRenderingContext2D, state: DriftState) {
     const travel = index / 11
     const shimmer = 0.55 + 0.45 * Math.sin((state.phase + index * 0.083) * Math.PI * 2)
     const beamCenter = rotatePoint(
-      lerp(26, 92 + state.driftLean * 18, travel) * scale,
-      lerp(1, 20 + state.driftLean * 7, travel) * scale,
+      lerp(26, 92 + state.driftLean * 18, travel) * scale * beamReach,
+      lerp(1, 20 + state.driftLean * 7, travel) * scale * beamWidth,
       state.carAngle + 0.11
     )
-    const lineLength = lerp(5, 19, travel) * scale
+    const lineLength = lerp(5, 19, travel) * scale * beamReach
     const lineAngle = state.carAngle + 0.07 + travel * 0.1
     const endpoint = rotatePoint(lineLength, 0, lineAngle)
     const glintAlpha = alpha * (0.18 + state.driftLean * 0.26) * shimmer * (1 - travel * 0.28)
@@ -2522,13 +2809,13 @@ function drawHeadlights(context: CanvasRenderingContext2D, state: DriftState) {
     const lateral = (band - 1.5) * (5.5 + state.driftLean * 3) * scale
     const origin = rotatePoint(17 * scale, lateral * 0.24, state.carAngle)
     const knee = rotatePoint(
-      (38 + band * 8) * scale,
-      (7 + band * 4 + state.bodyRoll) * scale,
+      (38 + band * 8) * scale * beamReach,
+      (7 + band * 4 + state.bodyRoll) * scale * beamWidth,
       state.carAngle + 0.04
     )
     const tip = rotatePoint(
-      (70 + band * 13 + state.driftLean * 16) * scale,
-      (13 + band * 5 + state.driftLean * 8) * scale,
+      (70 + band * 13 + state.driftLean * 16) * scale * beamReach,
+      (13 + band * 5 + state.driftLean * 8) * scale * beamWidth,
       state.carAngle + 0.12
     )
     const bandAlpha = alpha * laneSweep * shimmer * (0.48 - band * 0.07)
@@ -2564,10 +2851,14 @@ function drawHeadlights(context: CanvasRenderingContext2D, state: DriftState) {
     }
   }
 
-  const roadSweep = rotatePoint(46 * scale, (17 + state.bodyRoll) * scale, state.carAngle + 0.16)
+  const roadSweep = rotatePoint(
+    46 * scale * beamReach,
+    (17 + state.bodyRoll) * scale * beamWidth,
+    state.carAngle + 0.16
+  )
   const reflection = rotatePoint(
-    72 * scale,
-    (24 + state.driftLean * 7) * scale,
+    72 * scale * beamReach,
+    (24 + state.driftLean * 7) * scale * beamWidth,
     state.carAngle + 0.12
   )
 
@@ -2618,9 +2909,14 @@ function drawHeadlightRoadTexture(context: CanvasRenderingContext2D, state: Drif
     return
   }
 
-  const scale = Math.max(0.45, state.scale)
+  const distantExit = smoothstep((state.phase - 0.62) / 0.2)
+  const scale = state.phase > 0.62 ? Math.max(0.22, state.scale) : Math.max(0.45, state.scale)
+  const beamReach = 1 - distantExit * 0.5
+  const beamWidth = 1 - distantExit * 0.34
   const textureAlpha =
-    state.opacity * clamp(0.08 + state.glow * 0.14 + state.driftLean * 0.08, 0, 0.34)
+    state.opacity *
+    (1 - distantExit * 0.55) *
+    clamp(0.08 + state.glow * 0.14 + state.driftLean * 0.08, 0, 0.34)
 
   context.save()
   traceRoadSurfaceClip(context)
@@ -2630,11 +2926,11 @@ function drawHeadlightRoadTexture(context: CanvasRenderingContext2D, state: Drif
     const travel = index / 15
     const jitter = Math.sin((state.phase + index * 0.097) * Math.PI * 2)
     const base = rotatePoint(
-      lerp(18, 94, travel) * scale,
-      lerp(6, 27, travel) * scale + jitter * 1.3,
+      lerp(18, 94, travel) * scale * beamReach,
+      lerp(6, 27, travel) * scale * beamWidth + jitter * 1.3 * (1 - distantExit * 0.4),
       state.carAngle + 0.11
     )
-    const length = lerp(3, 16, travel) * scale
+    const length = lerp(3, 16, travel) * scale * beamReach
     const end = rotatePoint(length, 0, state.carAngle + 0.12 + travel * 0.08)
     const alpha = textureAlpha * (0.92 - travel * 0.38) * (0.72 + jitter * 0.28)
 
@@ -2653,7 +2949,9 @@ function drawHeadlightRoadTexture(context: CanvasRenderingContext2D, state: Drif
 }
 
 function drawCurvedWetReflections(context: CanvasRenderingContext2D, state: DriftState) {
-  const alpha = state.opacity * clamp(0.08 + state.glow * 0.16 + state.driftLean * 0.12, 0, 0.32)
+  const lateExitDamp = 1 - smoothstep((state.phase - 0.72) / 0.12) * 0.55
+  const alpha =
+    state.opacity * lateExitDamp * clamp(0.08 + state.glow * 0.16 + state.driftLean * 0.12, 0, 0.32)
 
   if (alpha <= 0.03) {
     return
@@ -2679,10 +2977,10 @@ function drawCurvedWetReflections(context: CanvasRenderingContext2D, state: Drif
       color: 'rgba(255, 206, 117,',
       offset: 0.18,
       points: [
-        { x: 182, y: 124 },
-        { x: 216, y: 130 },
-        { x: 249, y: 140 },
-        { x: 300, y: 157 },
+        { x: 184, y: 119 },
+        { x: 218, y: 111 },
+        { x: 256, y: 106 },
+        { x: 307, y: 111 },
       ],
     },
     {
@@ -2691,8 +2989,8 @@ function drawCurvedWetReflections(context: CanvasRenderingContext2D, state: Drif
       points: [
         { x: 122, y: 153 },
         { x: 158, y: 143 },
-        { x: 201, y: 145 },
-        { x: 255, y: 160 },
+        { x: 197, y: 128 },
+        { x: 238, y: 116 },
       ],
     },
   ]
@@ -2906,7 +3204,7 @@ function drawSmoke(
   state: DriftState,
   depth: SmokePuff['depth']
 ) {
-  const resetFade = phase < 0.9 ? 1 : clamp(1 - (phase - 0.9) / 0.07, 0, 1)
+  const resetFade = phase < 0.74 ? 1 : clamp(1 - (phase - 0.74) / 0.08, 0, 1)
 
   if (phase < 0.08 || resetFade <= 0 || state.smokeIntensity <= 0.02) {
     return
@@ -2939,11 +3237,15 @@ function drawSmoke(
       (puff.y + puff.offset * 52 + lift * (1.2 + puff.layer * 0.5) - puff.layer * 1.5) * trailScale,
       trailState.slideAngle - trailState.carAngle
     )
-    const depthAlpha = depth === 'front' ? 0.82 : 1
+    const entryReveal =
+      depth === 'front' ? 0.58 + smoothstep((trailState.phase - 0.34) / 0.2) * 0.24 : 1
+    const depthAlpha = depth === 'front' ? entryReveal : 1
+    const lateFade = smoothstep((0.76 - trailState.phase) / 0.14)
     const alpha =
       (0.035 + ageFade * 0.15) *
       trailState.smokeIntensity *
       resetFade *
+      lateFade *
       (1 - puff.layer * 0.06) *
       depthAlpha
     const radius = (puff.radius + puff.offset * 28 + puff.layer * 0.7) * trailScale
@@ -2980,7 +3282,7 @@ function drawSmoke(
 }
 
 function drawRouteSkidTrail(context: CanvasRenderingContext2D, phase: number, state: DriftState) {
-  const resetFade = phase < 0.88 ? 1 : clamp(1 - (phase - 0.88) / 0.08, 0, 1)
+  const resetFade = phase < 0.72 ? 1 : clamp(1 - (phase - 0.72) / 0.08, 0, 1)
 
   if (phase < 0.12 || resetFade <= 0 || state.smokeIntensity <= 0.02) {
     return
@@ -2999,7 +3301,7 @@ function drawRouteSkidTrail(context: CanvasRenderingContext2D, phase: number, st
     skidTrailOffsets.forEach((offset, index) => {
       const samplePhase = phase - offset
 
-      if (samplePhase < 0.12 || samplePhase > 0.88) {
+      if (samplePhase < 0.12 || samplePhase > 0.78) {
         previousPoint = null
         previousState = null
         return
@@ -3019,7 +3321,8 @@ function drawRouteSkidTrail(context: CanvasRenderingContext2D, phase: number, st
 
       if (previousPoint && previousState) {
         const ageFade = clamp(1 - offset / 0.24, 0, 1)
-        const intensity = trailState.driftLean * trailState.opacity * resetFade * ageFade
+        const lateFade = smoothstep((0.74 - trailState.phase) / 0.12)
+        const intensity = trailState.driftLean * trailState.opacity * resetFade * ageFade * lateFade
 
         if (intensity > 0.04) {
           pixelLine(
@@ -3059,7 +3362,7 @@ function drawTaillightReflections(
   phase: number,
   state: DriftState
 ) {
-  const resetFade = phase < 0.86 ? 1 : clamp(1 - (phase - 0.86) / 0.075, 0, 1)
+  const resetFade = phase < 0.72 ? 1 : clamp(1 - (phase - 0.72) / 0.08, 0, 1)
 
   if (phase < 0.1 || resetFade <= 0 || state.opacity <= 0.03) {
     return
@@ -3081,10 +3384,12 @@ function drawTaillightReflections(
     const trailState = index === 0 ? state : getDriftState(samplePhase)
     const ageFade = clamp(1 - offset / 0.16, 0, 1)
     const brakePulse = smoothstep(pulseNear(trailState.phase, 0.45, 0.18))
+    const lateFade = smoothstep((0.74 - trailState.phase) / 0.12)
     const alpha =
       trailState.opacity *
       resetFade *
       ageFade *
+      lateFade *
       (0.12 + trailState.driftLean * 0.24 + brakePulse * 0.18)
 
     if (alpha <= 0.025) {
@@ -3157,7 +3462,7 @@ function drawTaillightReflections(
 }
 
 function drawTireSpray(context: CanvasRenderingContext2D, phase: number, state: DriftState) {
-  const resetFade = phase < 0.86 ? 1 : clamp(1 - (phase - 0.86) / 0.065, 0, 1)
+  const resetFade = phase < 0.72 ? 1 : clamp(1 - (phase - 0.72) / 0.06, 0, 1)
 
   if (phase < 0.12 || resetFade <= 0 || state.smokeIntensity <= 0.04) {
     return
@@ -3176,7 +3481,8 @@ function drawTireSpray(context: CanvasRenderingContext2D, phase: number, state: 
 
     const trailState = getDriftState(samplePhase)
     const ageFade = clamp(1 - offset / 0.13, 0, 1)
-    const alpha = trailState.opacity * trailState.smokeIntensity * resetFade * ageFade
+    const lateFade = smoothstep((0.74 - trailState.phase) / 0.12)
+    const alpha = trailState.opacity * trailState.smokeIntensity * resetFade * ageFade * lateFade
 
     if (alpha <= 0.03) {
       return
@@ -3230,7 +3536,7 @@ function drawTireSpray(context: CanvasRenderingContext2D, phase: number, state: 
 }
 
 function drawTaillightStreaks(context: CanvasRenderingContext2D, phase: number, state: DriftState) {
-  const resetFade = phase < 0.86 ? 1 : clamp(1 - (phase - 0.86) / 0.065, 0, 1)
+  const resetFade = phase < 0.72 ? 1 : clamp(1 - (phase - 0.72) / 0.065, 0, 1)
 
   if (phase < 0.08 || resetFade <= 0) {
     return
@@ -3246,7 +3552,8 @@ function drawTaillightStreaks(context: CanvasRenderingContext2D, phase: number, 
     }
 
     const trailState = index === 0 ? state : getDriftState(samplePhase)
-    const fade = trailState.opacity * resetFade * (1 - index * 0.2)
+    const lateFade = smoothstep((0.74 - trailState.phase) / 0.12)
+    const fade = trailState.opacity * resetFade * lateFade * (1 - index * 0.2)
 
     if (fade <= 0.03) {
       return
@@ -3344,84 +3651,181 @@ function drawTireContact(context: CanvasRenderingContext2D, state: DriftState) {
 
 function drawMidgroundCarOcclusion(context: CanvasRenderingContext2D, state: DriftState) {
   const phaseWindow =
-    smoothstep((state.phase - 0.3) / 0.13) * smoothstep((0.86 - state.phase) / 0.14)
+    smoothstep((state.phase - 0.28) / 0.13) * smoothstep((0.68 - state.phase) / 0.13)
+  const farRoadWindow =
+    smoothstep((state.phase - 0.6) / 0.1) * smoothstep((0.88 - state.phase) / 0.08)
   const alpha = state.opacity * phaseWindow
 
-  if (alpha <= 0.025) {
+  if (alpha <= 0.025 && farRoadWindow <= 0.025) {
     return
   }
 
   const railCatch = clamp(state.glow * 0.42 + state.driftLean * 0.18, 0, 0.58) * alpha
 
   context.save()
-  context.globalAlpha = context.globalAlpha * alpha
+  if (alpha > 0.025) {
+    const railSamples = getRoadSamples(26).slice(6, 18)
+    const railPoints = railSamples.map((sample) => ({
+      x: sample.lowerEdge.x + sample.normal.x * (4 + sample.depthScale * 4),
+      y: sample.lowerEdge.y + sample.normal.y * (4 + sample.depthScale * 4),
+    }))
+
+    context.save()
+    context.globalAlpha = context.globalAlpha * alpha
+    fillPolygon(
+      context,
+      [
+        ...railPoints,
+        ...railPoints
+          .slice()
+          .reverse()
+          .map((point) => ({ x: point.x, y: point.y + 8 })),
+      ],
+      'rgba(3, 7, 14, 0.2)'
+    )
+    strokePolyline(context, railPoints, 'rgba(41, 51, 64, 0.72)', 3)
+    strokePolyline(context, railPoints, `rgba(210, 219, 216, ${0.28 + railCatch})`, 1)
+    railPoints
+      .filter((_, index) => index % 3 === 1)
+      .forEach((post, index) => {
+        const postAlpha = 0.44 + railCatch * (index % 2 === 0 ? 0.7 : 0.4)
+        const height = 10 + index * 2
+
+        pixelLine(
+          context,
+          post.x,
+          post.y,
+          post.x - 1,
+          post.y + height,
+          `rgba(35, 45, 58, ${postAlpha})`,
+          2
+        )
+        pixelLine(
+          context,
+          post.x + 1,
+          post.y,
+          post.x,
+          post.y + height - 2,
+          `rgba(135, 149, 157, ${postAlpha * 0.72})`,
+          1
+        )
+      })
+    context.restore()
+  }
+
+  if (farRoadWindow > 0.025) {
+    const farAlpha = state.opacity * farRoadWindow
+    const farRail = getRoadSamples(28)
+      .slice(16)
+      .map((sample) => ({
+        x: sample.upperEdge.x - sample.normal.x * (3 + sample.depthScale * 3),
+        y: sample.upperEdge.y - sample.normal.y * (3 + sample.depthScale * 3),
+      }))
+
+    strokePolyline(context, farRail, `rgba(11, 17, 28, ${0.54 * farAlpha})`, 2)
+    strokePolyline(
+      context,
+      farRail,
+      `rgba(202, 213, 213, ${0.28 * farAlpha + state.glow * 0.06})`,
+      1
+    )
+    farRail
+      .filter((_, index) => index % 3 === 1)
+      .forEach((post, index) => {
+        pixelLine(
+          context,
+          post.x,
+          post.y,
+          post.x - 1,
+          post.y + 5 + index,
+          `rgba(74, 89, 99, ${0.48 * farAlpha})`,
+          1
+        )
+      })
+  }
+  context.restore()
+}
+
+function drawDistantExitHaze(context: CanvasRenderingContext2D, state: DriftState) {
+  const hazeWindow =
+    smoothstep((state.phase - 0.72) / 0.1) * smoothstep((0.91 - state.phase) / 0.08)
+  const alpha = hazeWindow * state.opacity
+
+  if (alpha <= 0.025) {
+    return
+  }
+
+  context.save()
+  traceRoadSurfaceClip(context)
+  context.clip()
   fillPolygon(
     context,
     [
-      { x: 102, y: 140 },
-      { x: 150, y: 132 },
-      { x: 200, y: 134 },
-      { x: 267, y: 151 },
-      { x: 320, y: 169 },
-      { x: 320, y: 176 },
-      { x: 254, y: 155 },
-      { x: 197, y: 141 },
-      { x: 150, y: 139 },
-      { x: 100, y: 147 },
+      { x: 211, y: 93 },
+      { x: 320, y: 100 },
+      { x: 320, y: 125 },
+      { x: 226, y: 116 },
     ],
-    'rgba(3, 7, 14, 0.2)'
+    `rgba(132, 153, 164, ${0.12 * alpha})`
   )
-  strokePolyline(
+  pixelRect(context, 226, 101, 54, 1, `rgba(190, 203, 205, ${0.14 * alpha})`)
+  pixelRect(context, 268, 106, 42, 1, `rgba(104, 126, 139, ${0.16 * alpha})`)
+  context.restore()
+}
+
+function drawCarUpperReadabilityHighlights(context: CanvasRenderingContext2D, state: DriftState) {
+  const entryFocus =
+    smoothstep((state.phase - 0.1) / 0.12) * smoothstep((0.62 - state.phase) / 0.18)
+  const alpha = state.opacity * entryFocus
+
+  if (alpha <= 0.03) {
+    return
+  }
+
+  const roofStart = sampleCarPoint(state, -12, -12.6)
+  const roofEnd = sampleCarPoint(state, 15, -10.7)
+  const hoodStart = sampleCarPoint(state, 2, -5.8)
+  const hoodEnd = sampleCarPoint(state, 25, -4.1)
+  const glassStart = sampleCarPoint(state, -14, -7.4)
+  const glassEnd = sampleCarPoint(state, 8, -6.4)
+  const pillar = sampleCarPoint(state, -3, -7)
+
+  context.save()
+  pixelLine(
     context,
-    [
-      { x: 91, y: 147 },
-      { x: 145, y: 135 },
-      { x: 199, y: 134 },
-      { x: 257, y: 148 },
-      { x: 320, y: 169 },
-    ],
-    'rgba(41, 51, 64, 0.72)',
-    3
-  )
-  strokePolyline(
-    context,
-    [
-      { x: 93, y: 145 },
-      { x: 146, y: 133 },
-      { x: 199, y: 132 },
-      { x: 258, y: 146 },
-      { x: 320, y: 166 },
-    ],
-    `rgba(210, 219, 216, ${0.28 + railCatch})`,
+    roofStart.x,
+    roofStart.y,
+    roofEnd.x,
+    roofEnd.y,
+    `rgba(255, 255, 245, ${0.28 * alpha})`,
     1
   )
-  ;[
-    { x: 121, y: 141, h: 15 },
-    { x: 176, y: 134, h: 18 },
-    { x: 229, y: 142, h: 21 },
-    { x: 288, y: 158, h: 24 },
-  ].forEach((post, index) => {
-    const postAlpha = 0.44 + railCatch * (index % 2 === 0 ? 0.7 : 0.4)
-
-    pixelLine(
-      context,
-      post.x,
-      post.y,
-      post.x - 1,
-      post.y + post.h,
-      `rgba(35, 45, 58, ${postAlpha})`,
-      2
-    )
-    pixelLine(
-      context,
-      post.x + 1,
-      post.y,
-      post.x,
-      post.y + post.h - 2,
-      `rgba(135, 149, 157, ${postAlpha * 0.72})`,
-      1
-    )
-  })
+  pixelLine(
+    context,
+    hoodStart.x,
+    hoodStart.y,
+    hoodEnd.x,
+    hoodEnd.y,
+    `rgba(238, 244, 236, ${0.24 * alpha})`,
+    1
+  )
+  pixelLine(
+    context,
+    glassStart.x,
+    glassStart.y,
+    glassEnd.x,
+    glassEnd.y,
+    `rgba(52, 75, 100, ${0.34 * alpha})`,
+    1
+  )
+  pixelRect(
+    context,
+    pillar.x,
+    pillar.y,
+    1,
+    Math.max(1, state.scale * 5),
+    `rgba(4, 7, 12, ${0.42 * alpha})`
+  )
   context.restore()
 }
 
@@ -3589,7 +3993,7 @@ function drawCar(context: CanvasRenderingContext2D, state: DriftState) {
         return
       }
 
-      const spriteScale = state.scale * pose.spriteScale
+      const spriteScale = (state.scale * pose.spriteScale) / voxelRenderScale
 
       context.save()
       context.globalAlpha = context.globalAlpha * state.opacity * alpha
@@ -3616,12 +4020,12 @@ function drawCar(context: CanvasRenderingContext2D, state: DriftState) {
 }
 
 function drawScanlines(context: CanvasRenderingContext2D, phase: number) {
-  context.fillStyle = 'rgba(255, 255, 255, 0.035)'
+  context.fillStyle = 'rgba(255, 255, 255, 0.026)'
   for (let y = Math.round(phase * 12) % 4; y < sceneHeight; y += 4) {
     context.fillRect(0, y, sceneWidth, 1)
   }
 
-  context.fillStyle = 'rgba(3, 5, 12, 0.22)'
+  context.fillStyle = 'rgba(3, 5, 12, 0.18)'
   context.fillRect(0, 0, sceneWidth, 2)
   context.fillRect(0, sceneHeight - 2, sceneWidth, 2)
 }
@@ -3659,12 +4063,12 @@ function drawForegroundVignette(context: CanvasRenderingContext2D) {
     [
       { x: 320, y: 144 },
       { x: 320, y: 180 },
-      { x: 246, y: 180 },
-      { x: 288, y: 163 },
+      { x: 266, y: 180 },
+      { x: 298, y: 166 },
     ],
-    'rgba(1, 3, 8, 0.28)'
+    'rgba(1, 3, 8, 0.18)'
   )
-  pixelRect(context, 0, 176, sceneWidth, 4, 'rgba(1, 3, 8, 0.22)')
+  pixelRect(context, 0, 177, sceneWidth, 3, 'rgba(1, 3, 8, 0.18)')
 }
 
 function drawScene(context: CanvasRenderingContext2D, phase: number, reducedMotion: boolean) {
@@ -3709,8 +4113,10 @@ function drawScene(context: CanvasRenderingContext2D, phase: number, reducedMoti
     drawTaillightStreaks(context, motionPhase, state)
     drawCar(context, state)
     drawMidgroundCarOcclusion(context, state)
+    drawDistantExitHaze(context, state)
     drawSmoke(context, motionPhase, state, 'front')
     drawForegroundGuardrail(context, motionPhase)
+    drawCarUpperReadabilityHighlights(context, state)
     drawRoadsideMarkers(context, motionPhase, state, 'front')
     drawAtmosphericDither(context, motionPhase)
     drawForegroundVignette(context)

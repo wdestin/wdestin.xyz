@@ -1,9 +1,8 @@
 import Link from '@/components/Link'
 import profileLinks from '@/data/profileLinks'
-import { Github, Linkedin, Mail, X } from '@/components/social-icons/icons'
+import { Linkedin, Mail, X } from '@/components/social-icons/icons'
 
 const icons = {
-  github: Github,
   linkedin: Linkedin,
   mail: Mail,
   x: X,
@@ -58,7 +57,7 @@ export default function Home() {
         </div>
       </section>
 
-      <nav aria-label="Profile links" className="space-y-3">
+      <nav aria-label="Profile links" className="space-y-4 lg:py-4">
         {profileLinks.map(({ title, href, description, icon, label }) => {
           const Icon = icons[icon as IconName]
 
@@ -66,9 +65,9 @@ export default function Home() {
             <Link
               key={title}
               href={href}
-              className="group flex min-h-20 items-center gap-4 rounded-lg border border-gray-200 bg-white px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+              className="group flex min-h-24 items-center gap-4 rounded-lg border border-gray-200 bg-white px-5 py-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
             >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-900 transition group-hover:bg-primary-50 group-hover:text-primary-600 dark:bg-gray-800 dark:text-gray-100 dark:group-hover:bg-primary-950 dark:group-hover:text-primary-300">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-900 transition group-hover:bg-primary-50 group-hover:text-primary-600 dark:bg-gray-800 dark:text-gray-100 dark:group-hover:bg-primary-950 dark:group-hover:text-primary-300">
                 <Icon className="h-5 w-5 fill-current" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">

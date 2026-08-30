@@ -4,7 +4,7 @@ export type ProfileLink = {
   title: string
   href: string
   description: string
-  icon: 'linkedin' | 'github' | 'x' | 'mail'
+  icon: 'linkedin' | 'x' | 'mail'
   label: string
 }
 
@@ -15,13 +15,6 @@ const profileLinks: ProfileLink[] = [
     description: 'Experience, background, and the path so far.',
     icon: 'linkedin',
     label: 'Work history',
-  },
-  {
-    title: 'GitHub',
-    href: siteMetadata.github,
-    description: 'Projects, experiments, and works in progress.',
-    icon: 'github',
-    label: "Things I'm building",
   },
   {
     title: 'X',

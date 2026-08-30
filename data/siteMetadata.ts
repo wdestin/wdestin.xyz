@@ -6,7 +6,6 @@ type SiteMetadata = {
   siteUrl: string
   socialBanner: string
   email: string
-  github: string
   x: string
   linkedin: string
   analytics: {
@@ -24,7 +23,6 @@ const siteMetadata = {
   siteUrl: 'https://www.wdestin.xyz',
   socialBanner: '/opengraph-image',
   email: 'hello@wdestin.xyz',
-  github: 'https://github.com/wdestin',
   x: 'https://x.com/widgael',
   linkedin: 'https://www.linkedin.com/in/wdestin',
   analytics: {

@@ -47,7 +47,6 @@ export default function Image() {
         </div>
         <div style={{ color: '#6b7280', display: 'flex', fontSize: 28, gap: 26 }}>
           <span>LinkedIn</span>
-          <span>GitHub</span>
           <span>X</span>
           <span>Email</span>
         </div>

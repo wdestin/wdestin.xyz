@@ -10,10 +10,11 @@
     "dev": "next dev",
     "build": "next build",
     "serve": "next start",
-    "format": "prettier --write app components data css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
-    "format:check": "prettier --check app components data css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
+    "format": "prettier --write app components data scripts css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
+    "format:check": "prettier --check app components data scripts css tailwind.config.js next.config.js postcss.config.js prettier.config.js package.json README.md",
     "lint": "next lint --dir app --dir components --dir data",
-    "lint:fix": "next lint --fix --dir app --dir components --dir data"
+    "lint:fix": "next lint --fix --dir app --dir components --dir data",
+    "verify:drift": "node scripts/verify-drift-overlay.mjs"
   },
   "dependencies": {
     "autoprefixer": "^10.4.24",

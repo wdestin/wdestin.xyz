@@ -2,206 +2,53 @@
 
 import { useEffect, useRef } from 'react'
 
+import {
+  clamp,
+  lerp,
+  normalizeLoopPhase,
+  rotatePoint,
+  smootherstep,
+  smoothstep,
+} from './drift-loop/math'
+import {
+  getForegroundRailSamples,
+  getRoadSamples,
+  sampleMotionValue,
+  sampleRoad,
+  sampleRoadOffset,
+} from './drift-loop/road'
+import {
+  loopDurationMs,
+  reducedMotionLoopDurationMs,
+  sceneHeight,
+  sceneWidth,
+} from './drift-loop/constants'
+import { createSceneLayer } from './drift-loop/effects'
+import { validateCarVoxelAnimationData } from './drift-loop/car-voxel'
+import type {
+  CarSpritePart,
+  CarSpritePose,
+  ChevronMarker,
+  CityLight,
+  DriftState,
+  LightCatch,
+  Point,
+  ProjectedVoxelFace,
+  RoadGlint,
+  RoadScratch,
+  RoadsideMarker,
+  RoadSpeedStreak,
+  SmokePuff,
+  VoxelCarPose,
+  VoxelCuboid,
+  VoxelPalette,
+  VoxelPoint,
+  VoxelPoseFrame,
+  VoxelPoseTimelineFrame,
+} from './drift-loop/types'
+
 type DriftLoopOverlayProps = {
   onClose: () => void
-}
-
-const sceneWidth = 320
-const sceneHeight = 180
-const loopDurationMs = 6400
-const reducedMotionLoopDurationMs = 12800
-
-type Point = {
-  x: number
-  y: number
-}
-
-type CityLight = Point & {
-  color: string
-  phase: number
-}
-
-type SmokePuff = {
-  depth: 'back' | 'front'
-  layer: number
-  offset: number
-  radius: number
-  tone: 'cool' | 'warm' | 'white'
-  x: number
-  y: number
-}
-
-type DriftState = {
-  animationEnergy: number
-  bodyRoll: number
-  brakePulse: number
-  car: Point
-  carAngle: number
-  driftLean: number
-  glow: number
-  opacity: number
-  phase: number
-  scale: number
-  slideAngle: number
-  smoke: Point
-  smokeIntensity: number
-  suspensionLoad: number
-  wheelFrame: number
-}
-
-type RoadControlPoint = {
-  center: Point
-  depthScale: number
-  phase: number
-  roadWidth: number
-}
-
-type RoadSample = {
-  center: Point
-  depthScale: number
-  lowerEdge: Point
-  normal: Point
-  progress: number
-  roadWidth: number
-  tangent: Point
-  upperEdge: Point
-}
-
-type ForegroundRailSample = {
-  depthScale: number
-  normal: Point
-  point: Point
-  progress: number
-  tangent: Point
-}
-
-type MotionKeyframe = {
-  driftLean: number
-  glow: number
-  lateralOffset: number
-  opacity: number
-  phase: number
-  progress: number
-  slideLag: number
-  smokeIntensity: number
-}
-
-type RoadGlint = Point & {
-  length: number
-  phase: number
-  strength: number
-}
-
-type RoadScratch = Point & {
-  alpha: number
-  angle: number
-  length: number
-  width: number
-}
-
-type RoadSpeedStreak = Point & {
-  lane: number
-  length: number
-  phase: number
-  strength: number
-}
-
-type LightCatch = {
-  center: number
-  points: Point[]
-  span: number
-  width: number
-}
-
-type RoadsideMarker = Point & {
-  center: number
-  color: 'amber' | 'red' | 'white'
-  height: number
-  layer: 'back' | 'front'
-  size: number
-  span: number
-}
-
-type ChevronMarker = Point & {
-  center: number
-  scale: number
-  span: number
-}
-
-type CarSpritePart = {
-  alpha?: number
-  angle?: number
-  color: string
-  height: number
-  points?: Point[]
-  roll?: number
-  width: number
-  x: number
-  y: number
-}
-
-type CarSpritePose = {
-  parts: CarSpritePart[]
-  sparkOffset: Point
-  wheelHighlights?: Array<Point & { angle?: number; width: number }>
-}
-
-type VoxelPoint = {
-  x: number
-  y: number
-  z: number
-}
-
-type VoxelPalette = {
-  back: string
-  front: string
-  side: string
-  top: string
-}
-
-type VoxelCuboid = VoxelPoint & {
-  depth: number
-  height: number
-  palette: VoxelPalette
-  width: number
-}
-
-type VoxelCarPose = {
-  bodyPitch?: number
-  bodyShadeAlpha?: number
-  bodySquash?: number
-  depthScale?: number
-  detailAlpha?: number
-  farWheelAlpha?: number
-  frontDetailAlpha?: number
-  headlightAlpha?: number
-  headlightEmphasis?: number
-  lightJitter?: number
-  name: string
-  rearDetailAlpha?: number
-  rearEmphasis?: number
-  rearKick?: number
-  sparkOffset: Point
-  spriteScale: number
-  spriteYOffset?: number
-  suspension?: number
-  wheelPhase?: number
-  wheelTurn?: number
-  wheelHighlights: Array<Point & { angle?: number; width: number }>
-  yaw: number
-  yawOffset?: number
-}
-
-type VoxelPoseFrame = {
-  alpha: number
-  pose: VoxelCarPose
-}
-
-type ProjectedVoxelFace = {
-  alpha: number
-  color: string
-  depth: number
-  points: Point[]
 }
 
 const valleyLights: CityLight[] = [
@@ -932,7 +779,7 @@ const carVoxelPoses: VoxelCarPose[] = [
   },
 ]
 
-const carVoxelPoseTimeline = [
+const carVoxelPoseTimeline: VoxelPoseTimelineFrame[] = [
   { pose: carVoxelPoses[0], phase: 0 },
   { pose: carVoxelPoses[1], phase: 0.08 },
   { pose: carVoxelPoses[2], phase: 0.13 },
@@ -958,6 +805,8 @@ const carVoxelPoseTimeline = [
   { pose: carVoxelPoses[22], phase: 0.83 },
   { pose: carVoxelPoses[23], phase: 0.86 },
 ]
+
+validateCarVoxelAnimationData(carVoxelPoses, carVoxelPoseTimeline)
 
 const voxelSpriteWidth = 160
 const voxelSpriteHeight = 104
@@ -1431,327 +1280,8 @@ const carSpritePoses: CarSpritePose[] = [
   },
 ]
 
-const roadControlPoints: RoadControlPoint[] = [
-  { phase: 0, center: { x: -72, y: 174 }, roadWidth: 98, depthScale: 1.36 },
-  { phase: 0.12, center: { x: -8, y: 163 }, roadWidth: 88, depthScale: 1.24 },
-  { phase: 0.28, center: { x: 82, y: 145 }, roadWidth: 68, depthScale: 1.03 },
-  { phase: 0.46, center: { x: 146, y: 126 }, roadWidth: 50, depthScale: 0.82 },
-  { phase: 0.6, center: { x: 184, y: 114 }, roadWidth: 36, depthScale: 0.63 },
-  { phase: 0.72, center: { x: 226, y: 105 }, roadWidth: 27, depthScale: 0.48 },
-  { phase: 0.84, center: { x: 284, y: 100 }, roadWidth: 19, depthScale: 0.32 },
-  { phase: 0.93, center: { x: 338, y: 102 }, roadWidth: 13, depthScale: 0.22 },
-  { phase: 1, center: { x: 354, y: 103 }, roadWidth: 11, depthScale: 0.2 },
-]
-
-const motionKeyframes: MotionKeyframe[] = [
-  {
-    phase: 0,
-    progress: 0,
-    lateralOffset: 0,
-    opacity: 0,
-    driftLean: 0,
-    glow: 0.12,
-    slideLag: 0,
-    smokeIntensity: 0,
-  },
-  {
-    phase: 0.1,
-    progress: 0.02,
-    lateralOffset: 0.02,
-    opacity: 0,
-    driftLean: 0,
-    glow: 0.2,
-    slideLag: 0.02,
-    smokeIntensity: 0,
-  },
-  {
-    phase: 0.18,
-    progress: 0.16,
-    lateralOffset: 0.08,
-    opacity: 1,
-    driftLean: 0.16,
-    glow: 0.82,
-    slideLag: 0.08,
-    smokeIntensity: 0.26,
-  },
-  {
-    phase: 0.34,
-    progress: 0.36,
-    lateralOffset: 0.18,
-    opacity: 1,
-    driftLean: 0.62,
-    glow: 0.96,
-    slideLag: 0.22,
-    smokeIntensity: 0.72,
-  },
-  {
-    phase: 0.48,
-    progress: 0.52,
-    lateralOffset: 0.34,
-    opacity: 1,
-    driftLean: 1,
-    glow: 1,
-    slideLag: 0.33,
-    smokeIntensity: 1,
-  },
-  {
-    phase: 0.6,
-    progress: 0.64,
-    lateralOffset: 0.18,
-    opacity: 0.96,
-    driftLean: 0.56,
-    glow: 0.72,
-    slideLag: 0.19,
-    smokeIntensity: 0.45,
-  },
-  {
-    phase: 0.72,
-    progress: 0.78,
-    lateralOffset: 0.04,
-    opacity: 0.74,
-    driftLean: 0.18,
-    glow: 0.34,
-    slideLag: 0.08,
-    smokeIntensity: 0.1,
-  },
-  {
-    phase: 0.82,
-    progress: 0.9,
-    lateralOffset: 0,
-    opacity: 0.32,
-    driftLean: 0.04,
-    glow: 0.16,
-    slideLag: 0.03,
-    smokeIntensity: 0,
-  },
-  {
-    phase: 0.86,
-    progress: 0.98,
-    lateralOffset: 0,
-    opacity: 0,
-    driftLean: 0,
-    glow: 0.12,
-    slideLag: 0,
-    smokeIntensity: 0,
-  },
-  {
-    phase: 1,
-    progress: 1,
-    lateralOffset: 0,
-    opacity: 0,
-    driftLean: 0,
-    glow: 0.12,
-    slideLag: 0,
-    smokeIntensity: 0,
-  },
-]
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-function lerp(start: number, end: number, amount: number) {
-  return start + (end - start) * amount
-}
-
-function smoothstep(value: number) {
-  const amount = clamp(value, 0, 1)
-
-  return amount * amount * (3 - 2 * amount)
-}
-
-function smootherstep(value: number) {
-  const amount = clamp(value, 0, 1)
-
-  return amount * amount * amount * (amount * (amount * 6 - 15) + 10)
-}
-
-function cubicHermite(
-  start: number,
-  end: number,
-  startSlope: number,
-  endSlope: number,
-  duration: number,
-  amount: number
-) {
-  const amount2 = amount * amount
-  const amount3 = amount2 * amount
-  const startBlend = 2 * amount3 - 3 * amount2 + 1
-  const startSlopeBlend = amount3 - 2 * amount2 + amount
-  const endBlend = -2 * amount3 + 3 * amount2
-  const endSlopeBlend = amount3 - amount2
-
-  return (
-    startBlend * start +
-    startSlopeBlend * duration * startSlope +
-    endBlend * end +
-    endSlopeBlend * duration * endSlope
-  )
-}
-
-function getKeyframeSlope<T extends { phase: number }>(
-  keyframes: T[],
-  index: number,
-  readValue: (keyframe: T) => number
-) {
-  const previous = keyframes[Math.max(0, index - 1)]
-  const next = keyframes[Math.min(keyframes.length - 1, index + 1)]
-  const duration = next.phase - previous.phase
-
-  if (duration <= 0) {
-    return 0
-  }
-
-  return (readValue(next) - readValue(previous)) / duration
-}
-
-function sampleKeyframeValue<T extends { phase: number }>(
-  keyframes: T[],
-  phase: number,
-  segmentIndex: number,
-  readValue: (keyframe: T) => number
-) {
-  const start = keyframes[segmentIndex]
-  const end = keyframes[segmentIndex + 1]
-  const duration = end.phase - start.phase
-
-  if (duration <= 0) {
-    return readValue(start)
-  }
-
-  const amount = clamp((phase - start.phase) / duration, 0, 1)
-
-  return cubicHermite(
-    readValue(start),
-    readValue(end),
-    getKeyframeSlope(keyframes, segmentIndex, readValue),
-    getKeyframeSlope(keyframes, segmentIndex + 1, readValue),
-    duration,
-    amount
-  )
-}
-
-function getKeyframeSegmentIndex<T extends { phase: number }>(keyframes: T[], phase: number) {
-  const segmentIndex = keyframes.findIndex((keyframe, index) => {
-    const next = keyframes[index + 1]
-
-    return next ? phase >= keyframe.phase && phase <= next.phase : false
-  })
-
-  return segmentIndex === -1 ? keyframes.length - 2 : segmentIndex
-}
-
-function sampleMotionValue(phase: number, readValue: (keyframe: MotionKeyframe) => number) {
-  return sampleKeyframeValue(
-    motionKeyframes,
-    phase,
-    getKeyframeSegmentIndex(motionKeyframes, phase),
-    readValue
-  )
-}
-
-function sampleRoadValue(progress: number, readValue: (keyframe: RoadControlPoint) => number) {
-  return sampleKeyframeValue(
-    roadControlPoints,
-    progress,
-    getKeyframeSegmentIndex(roadControlPoints, progress),
-    readValue
-  )
-}
-
-function sampleRoadCenter(progress: number) {
-  const clampedProgress = clamp(progress, 0, 1)
-
-  return {
-    x: sampleRoadValue(clampedProgress, (keyframe) => keyframe.center.x),
-    y: sampleRoadValue(clampedProgress, (keyframe) => keyframe.center.y),
-  }
-}
-
-function sampleRoad(progress: number): RoadSample {
-  const clampedProgress = clamp(progress, 0, 1)
-  const center = sampleRoadCenter(clampedProgress)
-  const previous = sampleRoadCenter(clamp(clampedProgress - 0.006, 0, 1))
-  const next = sampleRoadCenter(clamp(clampedProgress + 0.006, 0, 1))
-  const tangentLength = Math.hypot(next.x - previous.x, next.y - previous.y) || 1
-  const tangent = {
-    x: (next.x - previous.x) / tangentLength,
-    y: (next.y - previous.y) / tangentLength,
-  }
-  const normal = {
-    x: -tangent.y,
-    y: tangent.x,
-  }
-  const roadWidth = sampleRoadValue(clampedProgress, (keyframe) => keyframe.roadWidth)
-  const depthScale = sampleRoadValue(clampedProgress, (keyframe) => keyframe.depthScale)
-  const halfWidth = roadWidth / 2
-
-  return {
-    center,
-    depthScale,
-    lowerEdge: {
-      x: center.x + normal.x * halfWidth,
-      y: center.y + normal.y * halfWidth,
-    },
-    normal,
-    progress: clampedProgress,
-    roadWidth,
-    tangent,
-    upperEdge: {
-      x: center.x - normal.x * halfWidth,
-      y: center.y - normal.y * halfWidth,
-    },
-  }
-}
-
-function getRoadSamples(count = 32) {
-  return Array.from({ length: count }, (_, index) => sampleRoad(index / (count - 1)))
-}
-
-function sampleRoadOffset(progress: number, lateralOffset: number) {
-  const road = sampleRoad(progress)
-
-  return {
-    x: road.center.x + road.normal.x * road.roadWidth * lateralOffset,
-    y: road.center.y + road.normal.y * road.roadWidth * lateralOffset,
-  }
-}
-
-function getForegroundRailSamples(count = 28): ForegroundRailSample[] {
-  return Array.from({ length: count }, (_, index) => {
-    const amount = index / (count - 1)
-    const progress = lerp(0.1, 0.9, amount)
-    const road = sampleRoad(progress)
-    const depth = road.depthScale
-    const railOffset = 2 + depth * 3
-    const foregroundDrop = 1 + depth * 2.5
-    const foregroundLift = smoothstep((0.38 - progress) / 0.24) * (27 + depth * 13)
-
-    return {
-      depthScale: depth,
-      normal: road.normal,
-      point: {
-        x: road.lowerEdge.x + road.normal.x * railOffset,
-        y: road.lowerEdge.y + road.normal.y * railOffset + foregroundDrop - foregroundLift,
-      },
-      progress,
-      tangent: road.tangent,
-    }
-  }).filter((sample) => sample.point.x > -34 && sample.point.x < sceneWidth + 34)
-}
-
 function pulseNear(phase: number, center: number, span: number) {
   return clamp(1 - Math.abs(phase - center) / span, 0, 1)
-}
-
-function normalizeLoopPhase(phase: number) {
-  const wrappedPhase = ((phase % 1) + 1) % 1
-
-  if (wrappedPhase < 0.005 || wrappedPhase > 0.995) {
-    return 0
-  }
-
-  return wrappedPhase
 }
 
 function pixelRect(
@@ -1872,26 +1402,6 @@ function strokePolyline(
 
     pixelLine(context, lastPoint.x, lastPoint.y, firstPoint.x, firstPoint.y, color, width)
   }
-}
-
-function createSceneLayer() {
-  if (typeof document === 'undefined') {
-    return null
-  }
-
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('2d')
-
-  canvas.width = sceneWidth
-  canvas.height = sceneHeight
-
-  if (!context) {
-    return null
-  }
-
-  context.imageSmoothingEnabled = false
-
-  return { canvas, context }
 }
 
 function getBackgroundDetailLayer() {
@@ -2086,16 +1596,6 @@ function drawPixelCircle(
   for (let row = -roundedRadius; row <= roundedRadius; row += 1) {
     const span = Math.floor(Math.sqrt(roundedRadius * roundedRadius - row * row))
     context.fillRect(centerX - span, centerY + row, span * 2 + 1, 1)
-  }
-}
-
-function rotatePoint(x: number, y: number, angle: number) {
-  const sin = Math.sin(angle)
-  const cos = Math.cos(angle)
-
-  return {
-    x: x * cos - y * sin,
-    y: x * sin + y * cos,
   }
 }
 
@@ -2400,8 +1900,8 @@ function drawVoxelProjectedRect(
 }
 
 function drawVoxelCarDetails(context: CanvasRenderingContext2D, pose: VoxelCarPose) {
-  const isLatePose = pose.name === 'recovery' || pose.name.startsWith('exit')
-  const isApexPose = pose.name.startsWith('apex') || pose.name === 'drift-init'
+  const isLatePose = pose.name.startsWith('recovery') || pose.name.startsWith('exit')
+  const isApexPose = pose.name.startsWith('apex') || pose.name.startsWith('drift-init')
   const frontDetailAlpha = pose.frontDetailAlpha ?? 1
   const headlightAlpha = pose.headlightAlpha ?? 1
   const rearDetailAlpha = pose.rearDetailAlpha ?? 1
@@ -4952,6 +4452,26 @@ function drawForegroundVignette(context: CanvasRenderingContext2D) {
   pixelRect(context, 0, 177, sceneWidth, 3, 'rgba(1, 3, 8, 0.18)')
 }
 
+function resetDrawingContext(context: CanvasRenderingContext2D) {
+  const reset = (context as CanvasRenderingContext2D & { reset?: () => void }).reset
+
+  if (reset) {
+    reset.call(context)
+  }
+
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.globalAlpha = 1
+  context.globalCompositeOperation = 'source-over'
+  context.filter = 'none'
+  context.lineWidth = 1
+  context.shadowBlur = 0
+  context.shadowColor = 'rgba(0, 0, 0, 0)'
+  context.shadowOffsetX = 0
+  context.shadowOffsetY = 0
+  context.imageSmoothingEnabled = false
+  context.beginPath()
+}
+
 function drawScene(context: CanvasRenderingContext2D, phase: number, reducedMotion: boolean) {
   const normalizedPhase = normalizeLoopPhase(phase)
   const motionPhase = reducedMotion
@@ -4959,18 +4479,9 @@ function drawScene(context: CanvasRenderingContext2D, phase: number, reducedMoti
     : normalizedPhase
   const state = getDriftState(motionPhase)
 
-  context.canvas.width = sceneWidth
-  context.canvas.height = sceneHeight
+  resetDrawingContext(context)
   context.save()
   try {
-    context.setTransform(1, 0, 0, 1, 0, 0)
-    context.globalAlpha = 1
-    context.globalCompositeOperation = 'source-over'
-    context.filter = 'none'
-    context.lineWidth = 1
-    context.shadowBlur = 0
-    context.imageSmoothingEnabled = false
-    context.beginPath()
     context.clearRect(0, 0, sceneWidth, sceneHeight)
     drawSky(context, motionPhase)
     drawBackgroundDetailLayer(context)

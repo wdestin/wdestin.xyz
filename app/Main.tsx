@@ -10,11 +10,7 @@ const icons = {
 
 type IconName = keyof typeof icons
 
-const profileFacts = [
-  'Builder',
-  'EdgePoint Wealth Management',
-  'Previously Capgemini and Thales DIS',
-]
+const profileFacts = ['Builder', 'Software', 'AI & Automation']
 
 const konamiCode = ['↑', '↑', '↓', '↓', '←', '→', '←', '→', 'B', 'A']
 
@@ -44,7 +40,7 @@ export default function Home() {
 
         <div
           aria-label="Konami code"
-          className="mt-8 hidden items-center gap-2 text-gray-400 lg:flex dark:text-gray-500"
+          className="mt-8 hidden items-center gap-2 text-gray-600 lg:flex dark:text-gray-300"
         >
           {konamiCode.map((key, index) => (
             <kbd
@@ -65,9 +61,9 @@ export default function Home() {
             <Link
               key={title}
               href={href}
-              className="group flex min-h-24 items-center gap-4 rounded-lg border border-gray-200 bg-white px-5 py-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+              className="group flex min-h-24 items-center gap-4 rounded-lg border border-gray-200 bg-white px-5 py-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:focus-visible:ring-primary-300 dark:focus-visible:ring-offset-gray-950"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-900 transition group-hover:bg-primary-50 group-hover:text-primary-600 dark:bg-gray-800 dark:text-gray-100 dark:group-hover:bg-primary-950 dark:group-hover:text-primary-300">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-900 transition group-hover:bg-primary-50 group-hover:text-primary-600 motion-reduce:transition-none dark:bg-gray-800 dark:text-gray-100 dark:group-hover:bg-primary-950 dark:group-hover:text-primary-300">
                 <Icon className="h-5 w-5 fill-current" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
@@ -83,7 +79,7 @@ export default function Home() {
               </span>
               <span
                 aria-hidden="true"
-                className="text-2xl leading-none text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-500 dark:text-gray-600 dark:group-hover:text-gray-400"
+                className="text-2xl leading-none text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-gray-500 motion-reduce:transform-none motion-reduce:transition-none dark:text-gray-600 dark:group-hover:text-gray-400"
               >
                 ›
               </span>

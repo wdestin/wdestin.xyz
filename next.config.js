@@ -1,11 +1,11 @@
 // You might need to insert additional domains in script-src if you are using external services
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' analytics.umami.is us.umami.is;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cloud.umami.is;
   style-src 'self' 'unsafe-inline';
   img-src 'self' blob: data:;
   media-src 'self';
-  connect-src 'self' analytics.umami.is us.umami.is;
+  connect-src 'self' https://gateway.umami.is;
   font-src 'self';
   frame-src 'self'
 `

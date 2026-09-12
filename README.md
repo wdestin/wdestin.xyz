@@ -14,6 +14,7 @@ yarn dev
 yarn format:check
 yarn lint
 yarn build
+yarn verify:a11y
 ```
 
 ## Editing
@@ -30,4 +31,6 @@ After deploying, verify:
 - `/` returns `200`
 - `/blog` returns `404`
 - `/opengraph-image` returns `200 image/png`
-- The page title is `Wid - Software Engineer in Toronto`
+- The page title is `Wid - Builder`
+
+`yarn verify:a11y` runs the WCAG, keyboard, reduced-motion, responsive-layout, and analytics CSP checks in a local Chrome instance.

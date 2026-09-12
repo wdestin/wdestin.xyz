@@ -17,12 +17,7 @@ import {
   sampleRoad,
   sampleRoadOffset,
 } from './drift-loop/road'
-import {
-  loopDurationMs,
-  reducedMotionLoopDurationMs,
-  sceneHeight,
-  sceneWidth,
-} from './drift-loop/constants'
+import { loopDurationMs, sceneHeight, sceneWidth } from './drift-loop/constants'
 import { createSceneLayer } from './drift-loop/effects'
 import { validateCarVoxelAnimationData } from './drift-loop/car-voxel'
 import type {
@@ -4522,14 +4517,74 @@ function drawScene(context: CanvasRenderingContext2D, phase: number, reducedMoti
 export default function DriftLoopOverlay({ onClose }: DriftLoopOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow
+    const previouslyFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const siteContent = document.getElementById('site-content')
+    const siteContentWasInert = siteContent?.inert ?? false
+    const originalAriaHidden = siteContent?.getAttribute('aria-hidden')
+    const dialog = dialogRef.current
+
+    function handleDialogKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') {
+        return
+      }
+
+      const focusableElements = Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      ).filter((element) => !element.hidden && element.getAttribute('aria-hidden') !== 'true')
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+      const activeElement = document.activeElement
+
+      if (event.shiftKey && (activeElement === firstElement || !dialog?.contains(activeElement))) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (
+        !event.shiftKey &&
+        (activeElement === lastElement || !dialog?.contains(activeElement))
+      ) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
     document.body.style.overflow = 'hidden'
     closeButtonRef.current?.focus()
+    if (siteContent) {
+      siteContent.inert = true
+      siteContent.setAttribute('aria-hidden', 'true')
+    }
+    dialog?.addEventListener('keydown', handleDialogKeyDown)
 
     return () => {
       document.body.style.overflow = originalOverflow
+      dialog?.removeEventListener('keydown', handleDialogKeyDown)
+
+      if (siteContent) {
+        siteContent.inert = siteContentWasInert
+
+        if (originalAriaHidden == null) {
+          siteContent.removeAttribute('aria-hidden')
+        } else {
+          siteContent.setAttribute('aria-hidden', originalAriaHidden)
+        }
+      }
+
+      if (previouslyFocusedElement?.isConnected) {
+        previouslyFocusedElement.focus()
+      }
     }
   }, [])
 
@@ -4543,7 +4598,6 @@ export default function DriftLoopOverlay({ onClose }: DriftLoopOverlayProps) {
 
     const drawingContext = context
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let reducedMotion = reducedMotionQuery.matches
     let animationFrame = 0
     let animationStartedAt: number | null = null
 
@@ -4554,25 +4608,44 @@ export default function DriftLoopOverlay({ onClose }: DriftLoopOverlayProps) {
     getRoadDetailLayer()
     carVoxelPoses.forEach((pose) => getCarVoxelSprite(pose))
 
-    const updateReducedMotion = (event: MediaQueryListEvent) => {
-      reducedMotion = event.matches
+    function stopAnimation() {
+      if (animationFrame !== 0) {
+        window.cancelAnimationFrame(animationFrame)
+        animationFrame = 0
+      }
     }
 
     function render(now: number) {
       animationStartedAt ??= now
-      const duration = reducedMotion ? reducedMotionLoopDurationMs : loopDurationMs
       const elapsed = now - animationStartedAt
 
-      drawScene(drawingContext, normalizeLoopPhase((elapsed % duration) / duration), reducedMotion)
+      drawScene(
+        drawingContext,
+        normalizeLoopPhase((elapsed % loopDurationMs) / loopDurationMs),
+        false
+      )
       animationFrame = window.requestAnimationFrame(render)
     }
 
-    drawScene(drawingContext, 0, reducedMotion)
-    animationFrame = window.requestAnimationFrame(render)
+    function applyMotionPreference(reducedMotion: boolean) {
+      stopAnimation()
+      animationStartedAt = null
+      drawScene(drawingContext, 0, reducedMotion)
+
+      if (!reducedMotion) {
+        animationFrame = window.requestAnimationFrame(render)
+      }
+    }
+
+    const updateReducedMotion = (event: MediaQueryListEvent) => {
+      applyMotionPreference(event.matches)
+    }
+
+    applyMotionPreference(reducedMotionQuery.matches)
     reducedMotionQuery.addEventListener('change', updateReducedMotion)
 
     return () => {
-      window.cancelAnimationFrame(animationFrame)
+      stopAnimation()
       reducedMotionQuery.removeEventListener('change', updateReducedMotion)
     }
   }, [])
@@ -4591,6 +4664,7 @@ export default function DriftLoopOverlay({ onClose }: DriftLoopOverlayProps) {
       }}
     >
       <section
+        ref={dialogRef}
         aria-label="Pixel art downhill drift animation"
         aria-modal="true"
         className="drift-shell"

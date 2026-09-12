@@ -58,11 +58,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {siteMetadata.analytics?.umamiAnalytics?.umamiWebsiteId && (
           <Script
             async
-            src="https://us.umami.is/script.js"
+            src="https://cloud.umami.is/script.js"
             data-website-id={siteMetadata.analytics.umamiAnalytics.umamiWebsiteId}
           />
         )}
-        <div className="flex min-h-screen flex-col font-sans">
+        <div id="site-content" className="flex min-h-screen flex-col font-sans">
           <main className="flex flex-1 items-center">{children}</main>
           <Footer />
         </div>
